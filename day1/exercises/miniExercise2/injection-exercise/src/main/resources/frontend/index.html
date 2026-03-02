@@ -84,9 +84,20 @@
         <button onclick="searchByEmail()">Zoeken</button>
     </div>
 
+    <div class="search-box">
+        <label for="name">Zoek student op naam:</label>
+        <input type="text" id="name" placeholder="bijv. Alice">
+        <button onclick="searchByName()">Zoeken</button>
+    </div>
+
     <div class="results" id="results" style="display: none;">
-        <h2>Resultaten</h2>
+        <h2>Resultaten (e-mail)</h2>
         <div id="resultList"></div>
+    </div>
+
+    <div class="results" id="nameResults" style="display: none;">
+        <h2>Resultaten (naam)</h2>
+        <div id="nameResultList"></div>
     </div>
 
     <script>
@@ -125,6 +136,43 @@
         // Enter-toets ondersteunt ook zoeken
         document.getElementById('email').addEventListener('keypress', function(e) {
             if (e.key === 'Enter') searchByEmail();
+        });
+
+        async function searchByName() {
+            const name = document.getElementById('name').value;
+            const resultsDiv = document.getElementById('nameResults');
+            const resultList = document.getElementById('nameResultList');
+
+            resultsDiv.style.display = 'block';
+            resultList.innerHTML = 'Zoeken...';
+
+            try {
+                const response = await fetch('/api/search-by-name?name=' + encodeURIComponent(name));
+                const data = await response.json();
+
+                if (data.error) {
+                    resultList.innerHTML = '<div class="error">Fout: ' + data.error + '</div>';
+                    return;
+                }
+
+                if (data.results.length === 0) {
+                    resultList.innerHTML = '<div class="no-results">Geen studenten gevonden.</div>';
+                    return;
+                }
+
+                let html = '';
+                data.results.forEach(r => {
+                    html += '<div class="result-item">' + r + '</div>';
+                });
+                resultList.innerHTML = html;
+            } catch (err) {
+                resultList.innerHTML = '<div class="error">Er ging iets mis: ' + err.message + '</div>';
+            }
+        }
+
+        // Enter-toets ondersteunt ook zoeken op naam
+        document.getElementById('name').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') searchByName();
         });
     </script>
 </body>

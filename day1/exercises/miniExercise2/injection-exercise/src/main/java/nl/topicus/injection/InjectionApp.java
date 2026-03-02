@@ -16,8 +16,8 @@ import java.util.List;
 
 public class InjectionApp {
 
-    private static final String DB_URL = "jdbc:h2:file:./data/injectiondb";
-    private static final String DB_USER = "sa";
+    private static final String DB_URL = "jdbc:h2:file:./data/miauw";
+    private static final String DB_USER = "miauw";
     private static final String DB_PASSWORD = "";
 
     public static void main(String[] args) throws SQLException, IOException {
@@ -71,6 +71,34 @@ public class InjectionApp {
 
         // TODO: Voeg hier een nieuw endpoint /api/search-by-name toe
         //       dat de findByName methode van StudentDao aanroept.
+        // API endpoint voor zoeken op naam
+        server.createContext("/api/search-by-name", exchange -> {
+            String query = exchange.getRequestURI().getQuery();
+            String name = "";
+            if (query != null && query.startsWith("name=")) {
+                name = URLDecoder.decode(query.substring(5), StandardCharsets.UTF_8);
+            }
+
+            try {
+                List<String> results = dao.findByName(name);
+                String json = buildJson(results);
+
+                exchange.getResponseHeaders().set("Content-Type", "application/json; charset=UTF-8");
+                byte[] response = json.getBytes(StandardCharsets.UTF_8);
+                exchange.sendResponseHeaders(200, response.length);
+                try (OutputStream os = exchange.getResponseBody()) {
+                    os.write(response);
+                }
+            } catch (SQLException e) {
+                String error = "{\"error\": \"" + e.getMessage().replace("\"", "'") + "\"}";
+                byte[] response = error.getBytes(StandardCharsets.UTF_8);
+                exchange.getResponseHeaders().set("Content-Type", "application/json; charset=UTF-8");
+                exchange.sendResponseHeaders(500, response.length);
+                try (OutputStream os = exchange.getResponseBody()) {
+                    os.write(response);
+                }
+            }
+        });
 
         server.setExecutor(null);
         server.start();
