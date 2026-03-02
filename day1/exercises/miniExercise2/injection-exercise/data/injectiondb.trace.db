@@ -1,3 +1,0 @@
-2026-02-21 21:00:32.186464+01:00 jdbc[3]: exception
-org.h2.jdbc.JdbcSQLSyntaxErrorException: Syntax error in SQL statement "SELECT * FROM students WHERE email = 'alice@university.nl or '1'='1[*]'"; SQL statement:
-SELECT * FROM students WHERE email = 'alice@university.nl or '1'='1' [42000-224]
