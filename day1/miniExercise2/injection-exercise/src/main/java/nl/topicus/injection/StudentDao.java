@@ -4,15 +4,22 @@ import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
 
+import javax.sql.DataSource;
+
 public class StudentDao
 {
+    private final DataSource datasource;
 
-    private final Connection connection;
-
-    public StudentDao(Connection connection)
+    public StudentDao(DataSource datasource)
     {
-        this.connection = connection;
+        this.datasource = datasource;
     }
+    
+    public Connection getConnection() throws SQLException 
+    {
+    	return datasource.getConnection();
+    }
+    
 
     /**
      * Zoekt studenten op basis van e-mailadres.
@@ -46,7 +53,7 @@ public class StudentDao
 
         System.out.println("Uitgevoerde query: " + sql);
 
-        try (PreparedStatement stmt = connection.prepareStatement(
+        try (PreparedStatement stmt = getConnection().prepareStatement(
                 "SELECT * FROM students WHERE email = ?"))
         {
             stmt.setString(1, email);
@@ -68,7 +75,7 @@ public class StudentDao
         public List<String> findByName(String name) throws SQLException {
         List<String> results = new ArrayList<>();
 
-        try (PreparedStatement stmt = connection.prepareStatement(
+        try (PreparedStatement stmt = getConnection().prepareStatement(
                 "SELECT * FROM students WHERE name LIKE ?"))
         {
             stmt.setString(1, name + "%");

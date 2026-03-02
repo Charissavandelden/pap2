@@ -1,0 +1,13 @@
+# Database files
+data/miauw.mv.db
+data/miauw.trace.db
+
+# Maven build output
+target/
+
+# IDE files
+.classpath
+.project
+.settings/
+*.iml
+.idea/

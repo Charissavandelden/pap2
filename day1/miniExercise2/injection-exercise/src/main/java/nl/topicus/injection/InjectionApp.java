@@ -9,22 +9,23 @@ import java.net.InetSocketAddress;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.sql.Connection;
-import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.List;
 
+import javax.sql.DataSource;
+
 public class InjectionApp {
 
-    private static final String DB_URL = "jdbc:h2:file:./data/miauw";
-    private static final String DB_USER = "miauw";
-    private static final String DB_PASSWORD = "";
-
     public static void main(String[] args) throws SQLException, IOException {
-        Connection conn = DriverManager.getConnection(DB_URL, DB_USER, DB_PASSWORD);
-        setupDatabase(conn);
-
-        StudentDao dao = new StudentDao(conn);
+    	DataSource datasource = ConnectionManager.getDataSource();
+        try (Connection conn = datasource.getConnection()) {
+        	setupDatabase(conn);
+		} catch (Exception e2) {
+			// TODO: handle exception
+		}
+        StudentDao dao = new StudentDao(datasource);
+    	
 
         HttpServer server = HttpServer.create(new InetSocketAddress(8080), 0);
 
