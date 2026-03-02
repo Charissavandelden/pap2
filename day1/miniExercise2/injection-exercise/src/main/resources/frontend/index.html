@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Student Zoeken</title>
+    <title>Pokemon Zoeken</title>
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -71,7 +71,7 @@
     </style>
 </head>
 <body>
-    <h1>Student Zoeken</h1>
+    <h1>Pokemon Zoeken</h1>
 
     <div class="hint-box">
         <strong>Tip:</strong> Probeer eens te zoeken op <code>alice@university.nl</code>
@@ -79,13 +79,13 @@
     </div>
 
     <div class="search-box">
-        <label for="email">Zoek student op e-mailadres:</label>
-        <input type="text" id="email" placeholder="bijv. alice@university.nl">
-        <button onclick="searchByEmail()">Zoeken</button>
+        <label for="type">Zoek Pokemon op type:</label>
+        <input type="text" id="type" placeholder="bijv. alice@university.nl">
+        <button onclick="searchByType()">Zoeken</button>
     </div>
 
     <div class="search-box">
-        <label for="name">Zoek student op naam:</label>
+        <label for="name">Zoek Pokemon op naam:</label>
         <input type="text" id="name" placeholder="bijv. Alice">
         <button onclick="searchByName()">Zoeken</button>
     </div>
@@ -101,8 +101,8 @@
     </div>
 
     <script>
-        async function searchByEmail() {
-            const email = document.getElementById('email').value;
+        async function searchBytype() {
+            const type = document.getElementById('type').value;
             const resultsDiv = document.getElementById('results');
             const resultList = document.getElementById('resultList');
 
@@ -110,7 +110,7 @@
             resultList.innerHTML = 'Zoeken...';
 
             try {
-                const response = await fetch('/api/search?email=' + encodeURIComponent(email));
+                const response = await fetch('/api/search?type=' + encodeURIComponent(type));
                 const data = await response.json();
 
                 if (data.error) {
@@ -119,7 +119,7 @@
                 }
 
                 if (data.results.length === 0) {
-                    resultList.innerHTML = '<div class="no-results">Geen studenten gevonden.</div>';
+                    resultList.innerHTML = '<div class="no-results">Geen Pokemon gevonden.</div>';
                     return;
                 }
 
@@ -134,8 +134,8 @@
         }
 
         // Enter-toets ondersteunt ook zoeken
-        document.getElementById('email').addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') searchByEmail();
+        document.getElementById('type').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') searchByType();
         });
 
         async function searchByName() {
@@ -156,7 +156,7 @@
                 }
 
                 if (data.results.length === 0) {
-                    resultList.innerHTML = '<div class="no-results">Geen studenten gevonden.</div>';
+                    resultList.innerHTML = '<div class="no-results">Geen Pokemon gevonden.</div>';
                     return;
                 }
 

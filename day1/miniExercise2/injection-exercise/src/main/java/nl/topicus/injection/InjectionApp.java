@@ -21,11 +21,10 @@ public class InjectionApp {
     	DataSource datasource = ConnectionManager.getDataSource();
         try (Connection conn = datasource.getConnection()) {
         	setupDatabase(conn);
-		} catch (Exception e2) {
-			// TODO: handle exception
+		} catch (SQLException e) {
+			System.out.println("Alles kaput: " + e.getMessage());
 		}
-        StudentDao dao = new StudentDao(datasource);
-    	
+        PokemonDao dao = new PokemonDao(datasource);
 
         HttpServer server = HttpServer.create(new InetSocketAddress(8080), 0);
 
@@ -44,13 +43,13 @@ public class InjectionApp {
         // API endpoint voor zoeken op e-mail
         server.createContext("/api/search", exchange -> {
             String query = exchange.getRequestURI().getQuery();
-            String email = "";
-            if (query != null && query.startsWith("email=")) {
-                email = URLDecoder.decode(query.substring(6), StandardCharsets.UTF_8);
+            String type = "";
+            if (query != null && query.startsWith("type=")) {
+                type = URLDecoder.decode(query.substring(5), StandardCharsets.UTF_8);
             }
 
             try {
-                List<String> results = dao.findByEmail(email);
+                List<String> results = dao.findByType(type);
                 String json = buildJson(results);
 
                 exchange.getResponseHeaders().set("Content-Type", "application/json; charset=UTF-8");
@@ -109,23 +108,25 @@ public class InjectionApp {
 
     private static void setupDatabase(Connection conn) throws SQLException {
         try (Statement stmt = conn.createStatement()) {
-            stmt.execute("DROP TABLE IF EXISTS students");
+            stmt.execute("DROP TABLE IF EXISTS pokemon");
             stmt.execute("""
-                CREATE TABLE students (
-                    id BIGINT AUTO_INCREMENT PRIMARY KEY,
-                    name VARCHAR(100),
-                    email VARCHAR(100),
-                    age INT
-                )
-            """);
+                    CREATE TABLE pokemon (
+                        id BIGINT AUTO_INCREMENT PRIMARY KEY,
+                        name VARCHAR(100),
+                        type VARCHAR(100)
+                    )
+                """);
+            stmt.executeUpdate("INSERT INTO pokemon (name, type) VALUES ('Alice de Vries', 'alice@university.nl')");
+            stmt.executeUpdate("INSERT INTO pokemon (name, type) VALUES ('Bob Jansen', 'bob@university.nl')");
+            stmt.executeUpdate("INSERT INTO pokemon (name, type) VALUES ('Charlie Bakker', 'charlie@university.nl')");
+            stmt.executeUpdate("INSERT INTO pokemon (name, type) VALUES ('Diana Smit', 'diana@university.nl')");
+            stmt.executeUpdate("INSERT INTO pokemon (name, type) VALUES ('Eva Peters', 'eva@university.nl')");
 
-            stmt.executeUpdate("INSERT INTO students (name, email, age) VALUES ('Alice de Vries', 'alice@university.nl', 21)");
-            stmt.executeUpdate("INSERT INTO students (name, email, age) VALUES ('Bob Jansen', 'bob@university.nl', 23)");
-            stmt.executeUpdate("INSERT INTO students (name, email, age) VALUES ('Charlie Bakker', 'charlie@university.nl', 22)");
-            stmt.executeUpdate("INSERT INTO students (name, email, age) VALUES ('Diana Smit', 'diana@university.nl', 24)");
-            stmt.executeUpdate("INSERT INTO students (name, email, age) VALUES ('Eva Peters', 'eva@university.nl', 20)");
-
-            System.out.println("Database gevuld met 5 studenten.");
+            System.out.println("Database gevuld met 5 pokemon.");
+        }
+        catch (SQLException e)
+        {
+        	System.out.println(e.getMessage());
         }
     }
 
