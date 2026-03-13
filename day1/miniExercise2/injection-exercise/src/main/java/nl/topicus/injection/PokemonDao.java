@@ -6,7 +6,7 @@ import java.util.List;
 
 import javax.sql.DataSource;
 
-public class PokemonDao
+public class PokemonDao implements IPokemonDAO
 {
     private final DataSource datasource;
 
@@ -14,58 +14,76 @@ public class PokemonDao
     {
         this.datasource = datasource;
     }
-    
-    public Connection getConnection() throws SQLException 
+
+    public Connection getConnection() throws SQLException
     {
-    	return datasource.getConnection();
+        return datasource.getConnection();
     }
-    
+
     public List<String> findByType(String type) throws SQLException
     {
         List<String> results = new ArrayList<>();
         String sql = "SELECT * FROM pokemon WHERE type LIKE ?";
         System.out.println("Uitgevoerde query: " + sql);
 
-        try (PreparedStatement stmt = getConnection().prepareStatement(
-                sql))
+        try (PreparedStatement stmt = getConnection().prepareStatement(sql))
         {
-            stmt.setString(1, type);
+            stmt.setString(1, "%" + type + "%");
             try (ResultSet rs = stmt.executeQuery())
             {
                 while (rs.next())
                 {
-                    results.add(
-                            rs.getLong("id") + " | " + rs.getString("name") + " | " + rs.getString(
-                                    "type"));
+                    createResultList(results, rs);
                 }
             }
             return results;
         }
     }
 
-        // TODO: Voeg hier een findByName(String name) methode toe die een student zoekt op naam.
-        //       Gebruik hiervoor direct een PreparedStatement.
-        public List<String> findByName(String name) throws SQLException
-        {
-            List<String> results = new ArrayList<>();
-            String sql = "SELECT * FROM pokemon WHERE name LIKE ?";
-            System.out.println("Uitgevoerde query: " + sql);
+    public List<String> findByName(String name) throws SQLException
+    {
+        List<String> results = new ArrayList<>();
+        String sql = "SELECT * FROM pokemon WHERE name LIKE ?";
+        System.out.println("Uitgevoerde query: " + sql);
 
-        try (PreparedStatement stmt = getConnection().prepareStatement(
-                sql))
+        try (PreparedStatement stmt = getConnection().prepareStatement(sql))
         {
-            stmt.setString(1, name + "%");
+            stmt.setString(1, "%" + name + "%");
             try (ResultSet rs = stmt.executeQuery())
             {
                 while (rs.next())
                 {
-                    results.add(
-                            rs.getLong("id") + " | " + rs.getString("name") + " | " + rs.getString(
-                                    "type"));
+                    createResultList(results, rs);
                 }
             }
             return results;
         }
+    }
+
+    public List<String> findAll() throws SQLException
+    {
+        List<String> results = new ArrayList<>();
+        String sql = "SELECT * FROM pokemon";
+        System.out.println("Uitgevoerde query: " + sql);
+
+        try (PreparedStatement stmt = getConnection().prepareStatement(sql))
+        {
+            try (ResultSet rs = stmt.executeQuery())
+            {
+                while (rs.next())
+                {
+                    createResultList(results, rs);
+                }
+            }
+            return results;
+        }
+    }
+
+    private static void createResultList(List<String> results, ResultSet rs) throws SQLException
+    {
+        results.add(
+                rs.getLong("id") + " | " + rs.getString("name") + " | " + rs.getString(
+                        "type"));
     }
 }
 

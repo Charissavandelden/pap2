@@ -110,7 +110,7 @@
             resultList.innerHTML = 'Zoeken...';
 
             try {
-                const response = await fetch('/api/search?type=' + encodeURIComponent(type));
+                const response = await fetch('/api/search-by-type?type=' + encodeURIComponent(type));
                 const data = await response.json();
 
                 if (data.error) {
