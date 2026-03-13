@@ -6,7 +6,7 @@ import java.util.List;
 
 import javax.sql.DataSource;
 
-public class PokemonDao implements IPokemonDAO
+public class PokemonDao extends GenericDAO<Pokemon> implements IPokemonDAO
 {
     private final DataSource datasource;
 
@@ -62,24 +62,10 @@ public class PokemonDao implements IPokemonDAO
 
     public List<String> findAll() throws SQLException
     {
-        List<String> results = new ArrayList<>();
-        String sql = "SELECT * FROM pokemon";
-        System.out.println("Uitgevoerde query: " + sql);
-
-        try (PreparedStatement stmt = getConnection().prepareStatement(sql))
-        {
-            try (ResultSet rs = stmt.executeQuery())
-            {
-                while (rs.next())
-                {
-                    createResultList(results, rs);
-                }
-            }
-            return results;
-        }
+        return findAll("pokemon", getConnection());
     }
 
-    private static void createResultList(List<String> results, ResultSet rs) throws SQLException
+    static void createResultList(List<String> results, ResultSet rs) throws SQLException
     {
         results.add(
                 rs.getLong("id") + " | " + rs.getString("name") + " | " + rs.getString(
