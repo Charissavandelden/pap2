@@ -43,6 +43,9 @@ public class InjectionApp
         // API endpoint voor zoeken op Pokémon naam
         serveSearchByNaamEndpoint(server, dao);
 
+        // API endpoint voor ophalen alle Pokemon
+        serveFindAllEndpoint(server, dao);
+
         server.setExecutor(null);
         server.start();
         System.out.println("Server gestart op http://localhost:8080");
@@ -62,6 +65,21 @@ public class InjectionApp
             try
             {
                 List<String> results = dao.findByName(name);
+                sendHTTPRequest(exchange, results);
+            }
+            catch (SQLException e)
+            {
+                printError(exchange, e);
+            }
+        });
+    }
+
+    private static void serveFindAllEndpoint(HttpServer server, PokemonDao dao)
+    {
+        server.createContext("/api/find-all", exchange -> {
+            try
+            {
+                List<String> results = dao.findAll();
                 sendHTTPRequest(exchange, results);
             }
             catch (SQLException e)
