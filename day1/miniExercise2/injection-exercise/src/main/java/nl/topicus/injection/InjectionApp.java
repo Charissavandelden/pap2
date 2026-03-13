@@ -116,13 +116,12 @@ public class InjectionApp {
                         type VARCHAR(100)
                     )
                 """);
-            stmt.executeUpdate("INSERT INTO pokemon (name, type) VALUES ('Alice de Vries', 'alice@university.nl')");
-            stmt.executeUpdate("INSERT INTO pokemon (name, type) VALUES ('Bob Jansen', 'bob@university.nl')");
-            stmt.executeUpdate("INSERT INTO pokemon (name, type) VALUES ('Charlie Bakker', 'charlie@university.nl')");
-            stmt.executeUpdate("INSERT INTO pokemon (name, type) VALUES ('Diana Smit', 'diana@university.nl')");
-            stmt.executeUpdate("INSERT INTO pokemon (name, type) VALUES ('Eva Peters', 'eva@university.nl')");
+            stmt.executeUpdate("INSERT INTO pokemon (name, type) VALUES ('Bulbasaur', 'Grass')");
+            stmt.executeUpdate("INSERT INTO pokemon (name, type) VALUES ('Charizard', 'Fire')");
+            stmt.executeUpdate("INSERT INTO pokemon (name, type) VALUES ('Squirtle', 'Water')");
+            stmt.executeUpdate("INSERT INTO pokemon (name, type) VALUES ('Pikachu', 'Electric')");
 
-            System.out.println("Database gevuld met 5 pokemon.");
+            System.out.println("Database gevuld met 4 pokemon.");
         }
         catch (SQLException e)
         {
