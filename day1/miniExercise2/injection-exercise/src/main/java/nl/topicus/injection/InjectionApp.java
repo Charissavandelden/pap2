@@ -13,6 +13,7 @@ import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import javax.sql.DataSource;
 
@@ -64,7 +65,7 @@ public class InjectionApp
 
             try
             {
-                List<String> results = dao.findByName(name);
+                List<String> results = naarStrings(dao.findByName(name));
                 sendHTTPRequest(exchange, results);
             }
             catch (SQLException e)
@@ -74,12 +75,15 @@ public class InjectionApp
         });
     }
 
+    /**
+     * Registreert het API-endpoint dat alle Pokémon teruggeeft.
+     */
     private static void serveFindAllEndpoint(HttpServer server, PokemonDao dao)
     {
         server.createContext("/api/find-all", exchange -> {
             try
             {
-                List<String> results = dao.findAll();
+                List<String> results = naarStrings(dao.findAll());
                 sendHTTPRequest(exchange, results);
             }
             catch (SQLException e)
@@ -103,6 +107,9 @@ public class InjectionApp
         }
     }
 
+    /**
+     * Registreert het API-endpoint voor het zoeken van Pokémon op type.
+     */
     private static void serveSearchByTypeEndpoint(HttpServer server, PokemonDao dao)
     {
         server.createContext("/api/search-by-type", exchange -> {
@@ -115,7 +122,7 @@ public class InjectionApp
 
             try
             {
-                List<String> results = dao.findByType(type);
+                List<String> results = naarStrings(dao.findByType(type));
                 sendHTTPRequest(exchange, results);
             }
             catch (SQLException e)
@@ -125,6 +132,9 @@ public class InjectionApp
         });
     }
 
+    /**
+     * Registreert het endpoint dat de HTML-frontend serveert.
+     */
     private static void ServeFrontend(HttpServer server)
     {
         server.createContext("/", exchange -> {
@@ -153,6 +163,9 @@ public class InjectionApp
         }
     }
 
+    /**
+     * Maakt de Pokémon-tabel aan en vult deze met startdata.
+     */
     private static void setupDatabase(Connection conn) throws SQLException
     {
         try (Statement stmt = conn.createStatement())
@@ -178,6 +191,19 @@ public class InjectionApp
         }
     }
 
+    /**
+     * Converteert een lijst Pokémon naar leesbare weergavestrings voor de JSON-respons.
+     */
+    private static List<String> naarStrings(List<Pokemon> pokemons)
+    {
+        return pokemons.stream()
+                .map(p -> p.getId() + " | " + p.getName() + " | " + p.getType())
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Bouwt een JSON-object met een {@code results}-array op basis van de opgegeven lijst.
+     */
     private static String buildJson(List<String> results)
     {
         StringBuilder sb = new StringBuilder();

@@ -1,75 +1,54 @@
 package nl.topicus.injection;
 
+import javax.annotation.Nonnull;
+import javax.sql.DataSource;
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
 
-import javax.sql.DataSource;
+/**
+ * DAO voor het beheren van {@link Pokemon} entiteiten.
+ * Erft de vijf generieke CRUD-operaties en voegt Pokémon-specifieke zoekmethoden toe.
+ */
+public class PokemonDao extends AbstractDataSourceDao<Pokemon> implements IPokemonDAO {
 
-public class PokemonDao extends GenericDAO<Pokemon> implements IPokemonDAO
-{
-    private final DataSource datasource;
-
-    public PokemonDao(DataSource datasource)
-    {
-        this.datasource = datasource;
+    public PokemonDao(@Nonnull DataSource datasource) {
+        super(Pokemon.class, datasource);
     }
 
-    public Connection getConnection() throws SQLException
-    {
-        return datasource.getConnection();
+    /**
+     * Zoekt alle Pokémon waarvan het type de opgegeven tekst bevat (hoofdletterongevoelig).
+     */
+    @Override
+    @Nonnull
+    public List<Pokemon> findByType(@Nonnull String type) throws SQLException {
+        return zoekMetLike("type", type);
     }
 
-    public List<String> findByType(String type) throws SQLException
-    {
-        List<String> results = new ArrayList<>();
-        String sql = "SELECT * FROM pokemon WHERE type LIKE ?";
-        System.out.println("Uitgevoerde query: " + sql);
+    /**
+     * Zoekt alle Pokémon waarvan de naam de opgegeven tekst bevat (hoofdletterongevoelig).
+     */
+    @Override
+    @Nonnull
+    public List<Pokemon> findByName(@Nonnull String name) throws SQLException {
+        return zoekMetLike("name", name);
+    }
 
-        try (PreparedStatement stmt = getConnection().prepareStatement(sql))
-        {
-            stmt.setString(1, "%" + type + "%");
-            try (ResultSet rs = stmt.executeQuery())
-            {
-                while (rs.next())
-                {
-                    createResultList(results, rs);
+    /**
+     * Voert een SELECT-query uit met een LIKE-filter op de opgegeven kolom.
+     */
+    private List<Pokemon> zoekMetLike(@Nonnull String kolom, @Nonnull String waarde) throws SQLException {
+        List<Pokemon> results = new ArrayList<>();
+        String sql = "SELECT * FROM pokemon WHERE " + kolom + " LIKE ?";
+        try (Connection conn = getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, "%" + waarde + "%");
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    results.add(metadata.mapRow(rs));
                 }
             }
-            return results;
         }
-    }
-
-    public List<String> findByName(String name) throws SQLException
-    {
-        List<String> results = new ArrayList<>();
-        String sql = "SELECT * FROM pokemon WHERE name LIKE ?";
-        System.out.println("Uitgevoerde query: " + sql);
-
-        try (PreparedStatement stmt = getConnection().prepareStatement(sql))
-        {
-            stmt.setString(1, "%" + name + "%");
-            try (ResultSet rs = stmt.executeQuery())
-            {
-                while (rs.next())
-                {
-                    createResultList(results, rs);
-                }
-            }
-            return results;
-        }
-    }
-
-    public List<String> findAll() throws SQLException
-    {
-        return findAll("pokemon", getConnection());
-    }
-
-    static void createResultList(List<String> results, ResultSet rs) throws SQLException
-    {
-        results.add(
-                rs.getLong("id") + " | " + rs.getString("name") + " | " + rs.getString(
-                        "type"));
+        return results;
     }
 }
-

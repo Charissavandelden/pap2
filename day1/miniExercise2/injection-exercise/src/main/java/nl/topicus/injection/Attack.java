@@ -9,11 +9,11 @@ import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
 /**
- * Vertegenwoordigt een Pokémon-entiteit in de database.
+ * Vertegenwoordigt een aanval die een Pokémon kan uitvoeren.
  */
 @Entity
-@Table(name = "pokemon")
-public class Pokemon {
+@Table(name = "attack")
+public class Attack {
 
     @Id
     long id;
@@ -21,15 +21,18 @@ public class Pokemon {
     @Column(name = "name")
     String name;
 
-    @Column(name = "type")
-    String type;
+    @Column(name = "damage")
+    int damage;
+
+    public Attack() {}
+
+    public Attack(@Nonnull String name, int damage) {
+        this.name = name;
+        this.damage = damage;
+    }
 
     public long getId() {
         return id;
-    }
-
-    public void setId(long id) {
-        this.id = id;
     }
 
     @Nullable
@@ -41,12 +44,12 @@ public class Pokemon {
         this.name = name;
     }
 
-    @Nullable
-    public String getType() {
-        return type;
+    public int getDamage() {
+        return damage;
     }
 
-    public void setType(@Nonnull String type) {
-        this.type = type;
+    public void setDamage(int damage) {
+        this.damage = damage;
     }
 }
+
