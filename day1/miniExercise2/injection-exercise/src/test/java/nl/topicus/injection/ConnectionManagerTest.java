@@ -15,7 +15,7 @@ class ConnectionManagerTest {
 	@Test
 	public void testDataSource() throws SQLException
 	{
-		DataSource ds = ConnectionManager.getDataSource();
+		DataSource ds = TransactionManager.getDataSource();
 		assertNotNull(ds.getConnection());
 		
 		try {

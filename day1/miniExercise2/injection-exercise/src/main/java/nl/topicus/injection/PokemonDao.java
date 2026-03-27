@@ -38,17 +38,39 @@ public class PokemonDao extends AbstractDataSourceDao<Pokemon> implements IPokem
      * Voert een SELECT-query uit met een LIKE-filter op de opgegeven kolom.
      */
     private List<Pokemon> zoekMetLike(@Nonnull String kolom, @Nonnull String waarde) throws SQLException {
-        List<Pokemon> results = new ArrayList<>();
-        String sql = "SELECT * FROM pokemon WHERE " + kolom + " LIKE ?";
-        try (Connection conn = getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            stmt.setString(1, "%" + waarde + "%");
-            try (ResultSet rs = stmt.executeQuery()) {
-                while (rs.next()) {
-                    results.add(metadata.mapRow(rs));
+        TransactionManager transactionManager = new TransactionManager();
+                List<Pokemon> results = new ArrayList<>();
+
+
+        transactionManager.runInTransaction(() -> {
+            try {
+                String sql = "SELECT * FROM pokemon WHERE " + kolom + " LIKE ?";
+
+                Connection conn = getConnection();
+                PreparedStatement stmt = conn.prepareStatement(sql);
+                stmt.setString(1, "%" + waarde + "%");
+                try (ResultSet rs = stmt.executeQuery()) {
+                    while (rs.next()) {
+                        results.add(metadata.mapRow(rs));
+                    }
                 }
+            } catch (SQLException e) {
+                throw new RuntimeException(e); // must wrap checked exception
             }
-        }
+        });
+
+
+//        List<Pokemon> results = new ArrayList<>();
+//        String sql = "SELECT * FROM pokemon WHERE " + kolom + " LIKE ?";
+//        try (Connection conn = getConnection();
+//             PreparedStatement stmt = conn.prepareStatement(sql)) {
+//            stmt.setString(1, "%" + waarde + "%");
+//            try (ResultSet rs = stmt.executeQuery()) {
+//                while (rs.next()) {
+//                    results.add(metadata.mapRow(rs));
+//                }
+//            }
+//        }
         return results;
     }
 }

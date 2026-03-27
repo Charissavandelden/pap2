@@ -21,7 +21,7 @@ public class InjectionApp
 {
     public static void main(String[] args) throws IOException
     {
-        DataSource datasource = ConnectionManager.getDataSource();
+        DataSource datasource = TransactionManager.getDataSource();
         PokemonDao dao = new PokemonDao(datasource);
 
         try (Connection conn = datasource.getConnection())
@@ -111,7 +111,7 @@ public class InjectionApp
      * Registreert het API-endpoint voor het zoeken van Pokémon op type.
      */
     private static void serveSearchByTypeEndpoint(HttpServer server, PokemonDao dao)
-    {
+	{
         server.createContext("/api/search-by-type", exchange -> {
             String query = exchange.getRequestURI().getQuery();
             String type = "";

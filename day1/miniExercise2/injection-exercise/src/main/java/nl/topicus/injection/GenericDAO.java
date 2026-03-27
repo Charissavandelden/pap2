@@ -20,6 +20,7 @@ import java.util.stream.Collectors;
 public abstract class GenericDAO<T> {
 
     protected final EntityMetadata<T> metadata;
+    TransactionManager transactionManager = new TransactionManager();
 
     protected GenericDAO(@Nonnull Class<T> entityClass) {
         this.metadata = new EntityMetadata<>(entityClass);
@@ -37,15 +38,23 @@ public abstract class GenericDAO<T> {
      */
     @Nonnull
     public List<T> findAll() throws SQLException {
-        String sql = "SELECT * FROM " + metadata.getTableName();
         List<T> results = new ArrayList<>();
-        try (Connection conn = getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql);
-             ResultSet rs = stmt.executeQuery()) {
-            while (rs.next()) {
-                results.add(metadata.mapRow(rs));
+
+        transactionManager.runInTransaction(() -> {
+            try {
+                String sql = "SELECT * FROM " + metadata.getTableName();
+                try (Connection conn = getConnection();
+                        PreparedStatement stmt = conn.prepareStatement(sql);
+                        ResultSet rs = stmt.executeQuery()) {
+                    while (rs.next()) {
+                        results.add(metadata.mapRow(rs));
+                    }
+                }
+            } catch (SQLException e) {
+                throw new RuntimeException(e); // must wrap checked exception
             }
-        }
+        });
+
         return results;
     }
 
@@ -57,18 +66,28 @@ public abstract class GenericDAO<T> {
      */
     @Nonnull
     public Optional<T> findById(@Nonnull Object id) throws SQLException {
-        FieldMetadata idField = vereistIdVeld();
-        String sql = "SELECT * FROM " + metadata.getTableName() + " WHERE " + idField.getColumnName() + " = ?";
-        try (Connection conn = getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            stmt.setObject(1, id);
-            try (ResultSet rs = stmt.executeQuery()) {
-                if (rs.next()) {
-                    return Optional.of(metadata.mapRow(rs));
+        List<T> results = new ArrayList<>();
+        transactionManager.runInTransaction(() -> {
+            try {
+                FieldMetadata idField = vereistIdVeld();
+                String sql = "SELECT * FROM " + metadata.getTableName() + " WHERE " + idField.getColumnName() + " = ?";
+
+
+                try (Connection conn = getConnection();
+                        PreparedStatement stmt = conn.prepareStatement(sql)) {
+                    stmt.setObject(1, id);
+                    try (ResultSet rs = stmt.executeQuery()) {
+                        if (rs.next()) {
+                            results.add(metadata.mapRow(rs));
+                        }
+                    }
                 }
+            } catch (SQLException e) {
+                throw new RuntimeException(e); // must wrap checked exception
             }
-        }
-        return Optional.empty();
+        });
+
+        return (results == List.of()) ? Optional.empty() : results.stream().findFirst();
     }
 
     /**
@@ -78,25 +97,29 @@ public abstract class GenericDAO<T> {
      * @param entity de op te slaan entiteit
      */
     public void save(@Nonnull T entity) throws SQLException {
-        List<FieldMetadata> nonIdFields = metadata.getNonIdFields();
-        String cols = nonIdFields.stream().map(FieldMetadata::getColumnName).collect(Collectors.joining(", "));
-        String placeholders = nonIdFields.stream().map(f -> "?").collect(Collectors.joining(", "));
-        String sql = "INSERT INTO " + metadata.getTableName() + " (" + cols + ") VALUES (" + placeholders + ")";
+        transactionManager.runInTransaction(() -> {
+            try {
+                List<FieldMetadata> nonIdFields = metadata.getNonIdFields();
+                String cols = nonIdFields.stream().map(FieldMetadata::getColumnName).collect(Collectors.joining(", "));
+                String placeholders = nonIdFields.stream().map(f -> "?").collect(Collectors.joining(", "));
+                String sql = "INSERT INTO " + metadata.getTableName() + " (" + cols + ") VALUES (" + placeholders + ")";
 
-        try (Connection conn = getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
-            for (int i = 0; i < nonIdFields.size(); i++) {
-                stmt.setObject(i + 1, nonIdFields.get(i).getValue(entity));
-            }
-            stmt.executeUpdate();
-            try (ResultSet keys = stmt.getGeneratedKeys()) {
-                if (keys.next() && metadata.getIdField() != null) {
-                    metadata.getIdField().setValue(entity, keys.getLong(1));
+                try (Connection conn = getConnection();
+                     PreparedStatement stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+                    for (int i = 0; i < nonIdFields.size(); i++) {
+                        stmt.setObject(i + 1, nonIdFields.get(i).getValue(entity));
+                    }
+                    stmt.executeUpdate();
+                    try (ResultSet keys = stmt.getGeneratedKeys()) {
+                        if (keys.next() && metadata.getIdField() != null) {
+                            metadata.getIdField().setValue(entity, keys.getLong(1));
+                        }
+                    }
                 }
+            } catch (SQLException | IllegalAccessException e) {
+                throw new RuntimeException("Fout bij opslaan van " + entity.getClass().getSimpleName(), e);
             }
-        } catch (IllegalAccessException e) {
-            throw new SQLException("Fout bij opslaan van " + entity.getClass().getSimpleName(), e);
-        }
+        });
     }
 
     /**
@@ -106,24 +129,28 @@ public abstract class GenericDAO<T> {
      * @param entity de bij te werken entiteit met het gevulde id-veld
      */
     public void update(@Nonnull T entity) throws SQLException {
-        FieldMetadata idField = vereistIdVeld();
-        List<FieldMetadata> nonIdFields = metadata.getNonIdFields();
-        String setClauses = nonIdFields.stream()
-                .map(f -> f.getColumnName() + " = ?")
-                .collect(Collectors.joining(", "));
-        String sql = "UPDATE " + metadata.getTableName() + " SET " + setClauses
-                + " WHERE " + idField.getColumnName() + " = ?";
+        transactionManager.runInTransaction(() -> {
+            try {
+                FieldMetadata idField = vereistIdVeld();
+                List<FieldMetadata> nonIdFields = metadata.getNonIdFields();
+                String setClauses = nonIdFields.stream()
+                        .map(f -> f.getColumnName() + " = ?")
+                        .collect(Collectors.joining(", "));
+                String sql = "UPDATE " + metadata.getTableName() + " SET " + setClauses
+                        + " WHERE " + idField.getColumnName() + " = ?";
 
-        try (Connection conn = getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            for (int i = 0; i < nonIdFields.size(); i++) {
-                stmt.setObject(i + 1, nonIdFields.get(i).getValue(entity));
+                try (Connection conn = getConnection();
+                     PreparedStatement stmt = conn.prepareStatement(sql)) {
+                    for (int i = 0; i < nonIdFields.size(); i++) {
+                        stmt.setObject(i + 1, nonIdFields.get(i).getValue(entity));
+                    }
+                    stmt.setObject(nonIdFields.size() + 1, idField.getValue(entity));
+                    stmt.executeUpdate();
+                }
+            } catch (SQLException | IllegalAccessException e) {
+                throw new RuntimeException("Fout bij updaten van " + entity.getClass().getSimpleName(), e);
             }
-            stmt.setObject(nonIdFields.size() + 1, idField.getValue(entity));
-            stmt.executeUpdate();
-        } catch (IllegalAccessException e) {
-            throw new SQLException("Fout bij updaten van " + entity.getClass().getSimpleName(), e);
-        }
+        });
     }
 
     /**
@@ -132,13 +159,19 @@ public abstract class GenericDAO<T> {
      * @param id de waarde van het primaire sleutelveld
      */
     public void delete(@Nonnull Object id) throws SQLException {
-        FieldMetadata idField = vereistIdVeld();
-        String sql = "DELETE FROM " + metadata.getTableName() + " WHERE " + idField.getColumnName() + " = ?";
-        try (Connection conn = getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            stmt.setObject(1, id);
-            stmt.executeUpdate();
-        }
+        transactionManager.runInTransaction(() -> {
+            try {
+                FieldMetadata idField = vereistIdVeld();
+                String sql = "DELETE FROM " + metadata.getTableName() + " WHERE " + idField.getColumnName() + " = ?";
+                try (Connection conn = getConnection();
+                     PreparedStatement stmt = conn.prepareStatement(sql)) {
+                    stmt.setObject(1, id);
+                    stmt.executeUpdate();
+                }
+            } catch (SQLException e) {
+                throw new RuntimeException(e);
+            }
+        });
     }
 
     /**
