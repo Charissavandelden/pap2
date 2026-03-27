@@ -16,7 +16,7 @@ public abstract class AbstractDataSourceDao<T> extends GenericDAO<T> {
     private final DataSource datasource;
 
     protected AbstractDataSourceDao(@Nonnull Class<T> entityClass, @Nonnull DataSource datasource) {
-        super(entityClass);
+        super(entityClass, new TransactionManager(datasource));
         this.datasource = datasource;
     }
 

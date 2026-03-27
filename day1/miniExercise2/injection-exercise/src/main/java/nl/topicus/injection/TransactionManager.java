@@ -1,21 +1,35 @@
 package nl.topicus.injection;
 
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+import javax.sql.DataSource;
 import java.sql.Connection;
 import java.sql.SQLException;
 
 public class TransactionManager extends ConnectionManager {
 
 	//TODO: Deze class moet een SINGLETON worden, zodat we deze overal kunnen gebruiken.
-	
+
+	@Nullable
+	private final DataSource injectedDataSource;
+
 	ThreadLocal<Connection> connection = new ThreadLocal<>();
 
 	public TransactionManager()
 	{
 		super();
+		this.injectedDataSource = null;
+	}
+
+	public TransactionManager(@Nonnull DataSource dataSource)
+	{
+		super();
+		this.injectedDataSource = dataSource;
 	}
 
 	public Connection begin() throws SQLException {
-		connection.set(getDataSource().getConnection());
+		DataSource ds = (injectedDataSource != null) ? injectedDataSource : getDataSource();
+		connection.set(ds.getConnection());
 		return connection.get();
 	}
 	
@@ -24,6 +38,7 @@ public class TransactionManager extends ConnectionManager {
 		//TODO: Logica implementeren voor commit, terugzetten van autocommit en het closen van de connection
 
 		conn.commit();
+		System.out.println("Transaction: succeeded");
 	}
 
 	public void rollback(Connection conn) throws SQLException
@@ -31,6 +46,7 @@ public class TransactionManager extends ConnectionManager {
 		//TODO: Logica implementeren voor rollback, terugzetten van autocommit en het closen van de connection
 
 		conn.rollback();
+		System.out.println("Transaction: failed ):");
 	}
 	
 	public void runInTransaction(Runnable runnable) throws SQLException

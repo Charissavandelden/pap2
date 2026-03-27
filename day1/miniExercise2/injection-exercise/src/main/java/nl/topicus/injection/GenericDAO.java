@@ -20,10 +20,16 @@ import java.util.stream.Collectors;
 public abstract class GenericDAO<T> {
 
     protected final EntityMetadata<T> metadata;
-    TransactionManager transactionManager = new TransactionManager();
+    TransactionManager transactionManager;
 
     protected GenericDAO(@Nonnull Class<T> entityClass) {
         this.metadata = new EntityMetadata<>(entityClass);
+        this.transactionManager = new TransactionManager();
+    }
+
+    protected GenericDAO(@Nonnull Class<T> entityClass, @Nonnull TransactionManager transactionManager) {
+        this.metadata = new EntityMetadata<>(entityClass);
+        this.transactionManager = transactionManager;
     }
 
     /**
