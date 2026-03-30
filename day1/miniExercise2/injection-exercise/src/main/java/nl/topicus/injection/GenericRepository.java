@@ -17,17 +17,17 @@ import java.util.stream.Collectors;
  *
  * @param <T> het type van de beheerde entiteit
  */
-public abstract class GenericDAO<T> {
+public abstract class GenericRepository<T> {
 
     protected final EntityMetadata<T> metadata;
     TransactionManager transactionManager;
 
-    protected GenericDAO(@Nonnull Class<T> entityClass) {
+    protected GenericRepository(@Nonnull Class<T> entityClass) {
         this.metadata = new EntityMetadata<>(entityClass);
         this.transactionManager = new TransactionManager();
     }
 
-    protected GenericDAO(@Nonnull Class<T> entityClass, @Nonnull TransactionManager transactionManager) {
+    protected GenericRepository(@Nonnull Class<T> entityClass, @Nonnull TransactionManager transactionManager) {
         this.metadata = new EntityMetadata<>(entityClass);
         this.transactionManager = transactionManager;
     }

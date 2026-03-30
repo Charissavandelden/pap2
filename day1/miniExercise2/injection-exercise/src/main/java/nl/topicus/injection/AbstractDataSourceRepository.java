@@ -11,11 +11,12 @@ import java.sql.SQLException;
  *
  * @param <T> het type van de beheerde entiteit
  */
-public abstract class AbstractDataSourceDao<T> extends GenericDAO<T> {
+public abstract class AbstractDataSourceRepository<T> extends GenericRepository<T>
+{
 
     private final DataSource datasource;
 
-    protected AbstractDataSourceDao(@Nonnull Class<T> entityClass, @Nonnull DataSource datasource) {
+    protected AbstractDataSourceRepository(@Nonnull Class<T> entityClass, @Nonnull DataSource datasource) {
         super(entityClass, new TransactionManager(datasource));
         this.datasource = datasource;
     }

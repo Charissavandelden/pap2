@@ -6,9 +6,10 @@ import javax.sql.DataSource;
 /**
  * DAO voor het beheren van {@link Attack} entiteiten via de generieke CRUD-operaties.
  */
-public class AttackDao extends AbstractDataSourceDao<Attack> {
+public class AttackRepository extends AbstractDataSourceRepository<Attack>
+{
 
-    public AttackDao(@Nonnull DataSource datasource) {
+    public AttackRepository(@Nonnull DataSource datasource) {
         super(Attack.class, datasource);
     }
 }

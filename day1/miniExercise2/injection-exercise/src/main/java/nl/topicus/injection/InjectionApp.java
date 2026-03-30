@@ -22,7 +22,7 @@ public class InjectionApp
     public static void main(String[] args) throws IOException
     {
         DataSource datasource = TransactionManager.getDataSource();
-        PokemonDao dao = new PokemonDao(datasource);
+        PokemonRepository dao = new PokemonRepository(datasource);
 
         try (Connection conn = datasource.getConnection())
         {
@@ -53,7 +53,7 @@ public class InjectionApp
         System.out.println("Druk op Ctrl+C om te stoppen.");
     }
 
-    private static void serveSearchByNaamEndpoint(HttpServer server, PokemonDao dao)
+    private static void serveSearchByNaamEndpoint(HttpServer server, PokemonRepository dao)
     {
         server.createContext("/api/search-by-name", exchange -> {
             String query = exchange.getRequestURI().getQuery();
@@ -78,7 +78,7 @@ public class InjectionApp
     /**
      * Registreert het API-endpoint dat alle Pokémon teruggeeft.
      */
-    private static void serveFindAllEndpoint(HttpServer server, PokemonDao dao)
+    private static void serveFindAllEndpoint(HttpServer server, PokemonRepository dao)
     {
         server.createContext("/api/find-all", exchange -> {
             try
@@ -110,7 +110,7 @@ public class InjectionApp
     /**
      * Registreert het API-endpoint voor het zoeken van Pokémon op type.
      */
-    private static void serveSearchByTypeEndpoint(HttpServer server, PokemonDao dao)
+    private static void serveSearchByTypeEndpoint(HttpServer server, PokemonRepository dao)
 	{
         server.createContext("/api/search-by-type", exchange -> {
             String query = exchange.getRequestURI().getQuery();

@@ -15,8 +15,8 @@ import static org.junit.jupiter.api.Assertions.*;
 class GenericDaoTest {
 
     private static DataSource dataSource;
-    private PokemonDao pokemonDao;
-    private AttackDao attackDao;
+    private PokemonRepository pokemonDao;
+    private AttackRepository attackDao;
 
     @BeforeAll
     static void setupDatabase() throws SQLException {
@@ -35,8 +35,8 @@ class GenericDaoTest {
 
     @BeforeEach
     void setup() throws SQLException {
-        pokemonDao = new PokemonDao(dataSource);
-        attackDao = new AttackDao(dataSource);
+        pokemonDao = new PokemonRepository(dataSource);
+        attackDao = new AttackRepository(dataSource);
 
         try (Connection conn = dataSource.getConnection();
              Statement stmt = conn.createStatement()) {

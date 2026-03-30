@@ -10,9 +10,9 @@ import java.util.List;
  * DAO voor het beheren van {@link Pokemon} entiteiten.
  * Erft de vijf generieke CRUD-operaties en voegt Pokémon-specifieke zoekmethoden toe.
  */
-public class PokemonDao extends AbstractDataSourceDao<Pokemon> implements IPokemonDAO {
+public class PokemonRepository extends AbstractDataSourceRepository<Pokemon> implements IPokemonDAO {
 
-    public PokemonDao(@Nonnull DataSource datasource) {
+    public PokemonRepository(@Nonnull DataSource datasource) {
         super(Pokemon.class, datasource);
     }
 
