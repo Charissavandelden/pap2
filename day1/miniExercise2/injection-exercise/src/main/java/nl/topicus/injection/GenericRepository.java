@@ -108,7 +108,7 @@ public abstract class GenericRepository<T> {
                 List<FieldMetadata> nonIdFields = metadata.getNonIdFields();
                 String cols = nonIdFields.stream().map(FieldMetadata::getColumnName).collect(Collectors.joining(", "));
                 String placeholders = nonIdFields.stream().map(f -> "?").collect(Collectors.joining(", "));
-                String sql = "INSERT INTO " + metadata.getTableName() + " (" + cols + ") VALUES (" + placeholders + ")";
+                String sql = "INSERT INTO " + metadata.getTableName() + " (" + cols.toUpperCase() + ") VALUES (" + placeholders + ")";
 
                 try (Connection conn = getConnection();
                      PreparedStatement stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
@@ -141,9 +141,10 @@ public abstract class GenericRepository<T> {
                 List<FieldMetadata> nonIdFields = metadata.getNonIdFields();
                 String setClauses = nonIdFields.stream()
                         .map(f -> f.getColumnName() + " = ?")
+                        .map(s -> s.equals("version") ? s + " + 1" : s) // increment version
                         .collect(Collectors.joining(", "));
                 String sql = "UPDATE " + metadata.getTableName() + " SET " + setClauses
-                        + " WHERE " + idField.getColumnName() + " = ?";
+                        + " WHERE " + idField.getColumnName() + " = ? AND version = ?";
 
                 try (Connection conn = getConnection();
                      PreparedStatement stmt = conn.prepareStatement(sql)) {
@@ -151,6 +152,7 @@ public abstract class GenericRepository<T> {
                         stmt.setObject(i + 1, nonIdFields.get(i).getValue(entity));
                     }
                     stmt.setObject(nonIdFields.size() + 1, idField.getValue(entity));
+                    stmt.setObject(nonIdFields.size() + 2, metadata.getNonIdFields().stream().filter(s -> s.getColumnName().equals("version")).findFirst().get().getValue(entity));
                     stmt.executeUpdate();
                 }
             } catch (SQLException | IllegalAccessException e) {

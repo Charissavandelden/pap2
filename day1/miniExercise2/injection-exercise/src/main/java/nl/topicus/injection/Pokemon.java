@@ -24,6 +24,9 @@ public class Pokemon {
     @Column(name = "type")
     String type;
 
+    @Column(name = "version")
+    int version;
+
     public long getId() {
         return id;
     }
@@ -48,5 +51,15 @@ public class Pokemon {
 
     public void setType(@Nonnull String type) {
         this.type = type;
+    }
+
+    public int getVersion()
+    {
+        return version;
+    }
+
+    public void setVersion(int version)
+    {
+        this.version = version;
     }
 }

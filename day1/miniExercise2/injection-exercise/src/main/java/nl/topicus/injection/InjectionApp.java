@@ -175,7 +175,8 @@ public class InjectionApp
                     CREATE TABLE pokemon (
                         id BIGINT AUTO_INCREMENT PRIMARY KEY,
                         name VARCHAR(100),
-                        type VARCHAR(100)
+                        type VARCHAR(100),
+                        version INT DEFAULT 1
                     )
                 """);
             stmt.executeUpdate("INSERT INTO pokemon (name, type) VALUES ('Bulbasaur', 'Grass')");
