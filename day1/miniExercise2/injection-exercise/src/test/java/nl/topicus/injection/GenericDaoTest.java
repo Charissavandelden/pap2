@@ -142,4 +142,177 @@ class GenericDaoTest {
         attackDao.delete(attack.getId());
         assertFalse(attackDao.findById(attack.getId()).isPresent());
     }
+
+    @Test
+    void testPokemonBatchFindAll() throws SQLException {
+        Pokemon p1 = new Pokemon();
+        p1.setName("Bulbasaur");
+        p1.setType("Grass");
+
+        Pokemon p2 = new Pokemon();
+        p2.setName("Squirtle");
+        p2.setType("Water");
+
+        pokemonDao.saveAll(List.of(p1,p2));
+
+        List<Pokemon> pokemons = pokemonDao.findAll();
+        assertEquals(2, pokemons.size());
+    }
+
+    @Test
+    void testPokemonBatchSuperSnel() throws SQLException {
+
+        //Test wordt 10 keer uitgevoerd.
+        for (int i = 0; i < 10; i++)
+        {
+            Pokemon p1 = new Pokemon();
+            p1.setName("Bulbasaur");
+            p1.setType("Grass");
+
+            Pokemon p2 = new Pokemon();
+            p2.setName("Squirtle");
+            p2.setType("Water");
+
+            Pokemon p3 = new Pokemon();
+            Pokemon p4 = new Pokemon();
+            Pokemon p5 = new Pokemon();
+            Pokemon p6 = new Pokemon();
+            Pokemon p7 = new Pokemon();
+            Pokemon p8 = new Pokemon();
+            Pokemon p9 = new Pokemon();
+            Pokemon p10 = new Pokemon();
+            Pokemon p11 = new Pokemon();
+            Pokemon p12 = new Pokemon();
+            Pokemon p13 = new Pokemon();
+            Pokemon p14 = new Pokemon();
+            Pokemon p15 = new Pokemon();
+            Pokemon p16 = new Pokemon();
+            Pokemon p17 = new Pokemon();
+            Pokemon p18 = new Pokemon();
+            Pokemon p19 = new Pokemon();
+
+            long start = System.currentTimeMillis();
+            pokemonDao.saveAll(List.of(p1,p2,p3,p4,p5,p6,p7,p8,p9,p10,p11,p12,p13,p14,p15,p16,p17,p18,p19,p1,p2,p3,p4,p5,p6,p7,p8,p9,p10,p11,p12,p13,p14,p15,p16,p17,p18,p19,p1,p2,p3,p4,p5,p6,p7,p8,p9,p10,p11,p12,p13,p14,p15,p16,p17,p18,p19,p1,p2,p3,p4,p5,p6,p7,p8,p9,p10,p11,p12,p13,p14,p15,p16,p17,p18,p19));
+
+            long finish = System.currentTimeMillis();
+            long timeElapsed = finish - start;
+            System.out.println(timeElapsed);
+
+            long start2 = System.currentTimeMillis();
+            pokemonDao.save(p1);
+            pokemonDao.save(p2);
+            pokemonDao.save(p3);
+            pokemonDao.save(p4);
+            pokemonDao.save(p5);
+            pokemonDao.save(p6);
+            pokemonDao.save(p7);
+            pokemonDao.save(p8);
+            pokemonDao.save(p9);
+            pokemonDao.save(p10);
+            pokemonDao.save(p11);
+            pokemonDao.save(p12);
+            pokemonDao.save(p13);
+            pokemonDao.save(p14);
+            pokemonDao.save(p15);
+            pokemonDao.save(p16);
+            pokemonDao.save(p17);
+            pokemonDao.save(p18);
+            pokemonDao.save(p19);
+
+            pokemonDao.save(p1);
+            pokemonDao.save(p2);
+            pokemonDao.save(p3);
+            pokemonDao.save(p4);
+            pokemonDao.save(p5);
+            pokemonDao.save(p6);
+            pokemonDao.save(p7);
+            pokemonDao.save(p8);
+            pokemonDao.save(p9);
+            pokemonDao.save(p10);
+            pokemonDao.save(p11);
+            pokemonDao.save(p12);
+            pokemonDao.save(p13);
+            pokemonDao.save(p14);
+            pokemonDao.save(p15);
+            pokemonDao.save(p16);
+            pokemonDao.save(p17);
+            pokemonDao.save(p18);
+            pokemonDao.save(p19);
+
+            pokemonDao.save(p1);
+            pokemonDao.save(p2);
+            pokemonDao.save(p3);
+            pokemonDao.save(p4);
+            pokemonDao.save(p5);
+            pokemonDao.save(p6);
+            pokemonDao.save(p7);
+            pokemonDao.save(p8);
+            pokemonDao.save(p9);
+            pokemonDao.save(p10);
+            pokemonDao.save(p11);
+            pokemonDao.save(p12);
+            pokemonDao.save(p13);
+            pokemonDao.save(p14);
+            pokemonDao.save(p15);
+            pokemonDao.save(p16);
+            pokemonDao.save(p17);
+            pokemonDao.save(p18);
+            pokemonDao.save(p19);
+
+            pokemonDao.save(p1);
+            pokemonDao.save(p2);
+            pokemonDao.save(p3);
+            pokemonDao.save(p4);
+            pokemonDao.save(p5);
+            pokemonDao.save(p6);
+            pokemonDao.save(p7);
+            pokemonDao.save(p8);
+            pokemonDao.save(p9);
+            pokemonDao.save(p10);
+            pokemonDao.save(p11);
+            pokemonDao.save(p12);
+            pokemonDao.save(p13);
+            pokemonDao.save(p14);
+            pokemonDao.save(p15);
+            pokemonDao.save(p16);
+            pokemonDao.save(p17);
+            pokemonDao.save(p18);
+            pokemonDao.save(p19);
+
+            long finish2 = System.currentTimeMillis();
+            long timeElapsed2 = finish2 - start2;
+
+            assertTrue(timeElapsed2 > timeElapsed);
+        }
+    }
+
+    @Test
+    void testPokemonUpdateALL() throws SQLException {
+        Pokemon p1 = new Pokemon();
+        p1.setName("Eevee");
+        p1.setType("Normal");
+        pokemonDao.save(p1);
+
+        Pokemon p2 = new Pokemon();
+        p2.setName("Eevee");
+        p2.setType("Normal");
+        pokemonDao.save(p2);
+
+        p1.setName("Magikarp");
+        p1.setType("Water");
+
+        p2.setName("Flareon");
+        p2.setType("Fire");
+        pokemonDao.updateAll(List.of(p1, p2));
+
+        Optional<Pokemon> bijgewerkt1 = pokemonDao.findById(p2.getId());
+        assertTrue(bijgewerkt1.isPresent());
+        assertEquals("Flareon", bijgewerkt1.get().getName());
+        assertEquals("Fire", bijgewerkt1.get().getType());
+
+        Optional<Pokemon> bijgewerkt2 = pokemonDao.findById(p1.getId());
+        assertTrue(bijgewerkt2.isPresent());
+        assertEquals("Magikarp", bijgewerkt2.get().getName());
+        assertEquals("Water", bijgewerkt2.get().getType());
+    }
 }

@@ -28,6 +28,5 @@ class ConnectionManagerTest {
 		} catch (SQLException e) {
 			System.out.println(e.getMessage());
 		}
-		
 	}
 }
