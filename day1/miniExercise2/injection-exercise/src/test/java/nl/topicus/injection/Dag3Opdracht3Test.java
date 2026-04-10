@@ -66,7 +66,10 @@ public class Dag3Opdracht3Test
 			//dit mag niet
 //			System.out.println((FirePokemon)p.getName());
 
-			// dit zou wel met if instanceof FirePokemon werken maar dan wordt deze nooit true
+			// antwoord op vraag 3:
+			// dit zou wel met if instanceof FirePokemon werken ook
+			// als Pokemon null is want instance of is null-safe,
+			// maar dan wordt deze nooit true
 		}
 	}
 
