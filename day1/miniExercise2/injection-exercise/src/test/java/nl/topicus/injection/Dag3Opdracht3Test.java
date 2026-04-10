@@ -65,6 +65,8 @@ public class Dag3Opdracht3Test
 		for (Pokemon p : pokemons) {
 			//dit mag niet
 //			System.out.println((FirePokemon)p.getName());
+
+			// dit zou wel met if instanceof FirePokemon werken maar dan wordt deze nooit true
 		}
 	}
 
