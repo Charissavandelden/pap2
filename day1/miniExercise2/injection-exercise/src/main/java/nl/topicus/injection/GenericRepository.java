@@ -195,7 +195,6 @@ public abstract class GenericRepository<T> {
 
 
     public void saveAll(@Nonnull List<T> list) throws SQLException {
-
         transactionManager.runInTransaction(() -> {
             try {
                 List<FieldMetadata> nonIdFields = metadata.getNonIdFields();
@@ -221,10 +220,6 @@ public abstract class GenericRepository<T> {
                 }
 				catch (IllegalAccessException e)
 				{
-//                    transactionManager.rollback(conn);
-//                    conn.setAutoCommit(true);
-//                    conn.close();
-
 					throw new RuntimeException(e);
 				}
 			} catch (SQLException e) {

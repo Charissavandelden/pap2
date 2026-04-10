@@ -11,7 +11,9 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 /**
  * Leest de annotaties van een entiteitsklasse via reflectie en slaat de volledige
@@ -38,28 +40,35 @@ public class EntityMetadata<T> {
         List<FieldMetadata> all = new ArrayList<>();
         List<FieldMetadata> nonId = new ArrayList<>();
         FieldMetadata tempId = null;
+        Set<String> gezieneKolommen = new HashSet<>();
 
-        for (Field field : entityClass.getDeclaredFields()) {
-            boolean hasId = field.isAnnotationPresent(Id.class);
-            boolean hasColumn = field.isAnnotationPresent(Column.class);
+        Class<?> huidig = entityClass;
+        while (huidig != null && huidig != Object.class) {
+            for (Field field : huidig.getDeclaredFields()) {
+                boolean hasId = field.isAnnotationPresent(Id.class);
+                boolean hasColumn = field.isAnnotationPresent(Column.class);
 
-            if (!hasId && !hasColumn) continue;
+                if (!hasId && !hasColumn) continue;
 
-            String colName = field.getName();
-            if (hasColumn) {
-                Column col = field.getAnnotation(Column.class);
-                if (!col.name().isEmpty()) {
-                    colName = col.name();
+                String colName = field.getName();
+                if (hasColumn) {
+                    Column col = field.getAnnotation(Column.class);
+                    if (!col.name().isEmpty()) {
+                        colName = col.name();
+                    }
+                }
+
+                if (!gezieneKolommen.add(colName)) continue;
+
+                FieldMetadata meta = new FieldMetadata(field, colName, hasId);
+                all.add(meta);
+                if (hasId) {
+                    tempId = meta;
+                } else {
+                    nonId.add(meta);
                 }
             }
-
-            FieldMetadata meta = new FieldMetadata(field, colName, hasId);
-            all.add(meta);
-            if (hasId) {
-                tempId = meta;
-            } else {
-                nonId.add(meta);
-            }
+            huidig = huidig.getSuperclass();
         }
 
         this.idField = tempId;
