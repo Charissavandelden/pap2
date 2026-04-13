@@ -1,5 +1,7 @@
 package nl.topicus.injection.entities;
 
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 import nl.topicus.injection.annotation.*;
 
 import javax.annotation.Nonnull;
@@ -13,7 +15,6 @@ import javax.annotation.processing.Generated;
 @Table(name = "attack")
 public class Attack
 {
-
 	@Id
 	long id;
 
@@ -25,6 +26,30 @@ public class Attack
 
 	@Column()
 	int version;
+
+	@ManyToOne
+	@JoinColumn(name = "pokemon_id")
+	private Pokemon pokemon;
+
+	public Attack()
+	{
+	}
+
+	public Attack(@Nonnull String name, int damage)
+	{
+		this.name = name;
+		this.damage = damage;
+	}
+
+	public Pokemon getPokemon()
+	{
+		return pokemon;
+	}
+
+	public void setPokemon(Pokemon pokemon)
+	{
+		this.pokemon = pokemon;
+	}
 
 	public void setId(long id)
 	{
@@ -39,16 +64,6 @@ public class Attack
 	public void setVersion(int version)
 	{
 		this.version = version;
-	}
-
-	public Attack()
-	{
-	}
-
-	public Attack(@Nonnull String name, int damage)
-	{
-		this.name = name;
-		this.damage = damage;
 	}
 
 	public long getId()

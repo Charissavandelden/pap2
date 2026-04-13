@@ -1,5 +1,6 @@
 package nl.topicus.injection;
 
+import nl.topicus.injection.entities.Pokemon;
 import org.h2.jdbcx.JdbcDataSource;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
