@@ -183,6 +183,7 @@ public class InjectionApp
         try (Statement stmt = conn.createStatement())
         {
             System.out.println("Create pokemon table");
+            stmt.execute("DROP TABLE IF EXISTS attack");
             stmt.execute("DROP TABLE IF EXISTS pokemon");
             stmt.execute("""
                     CREATE TABLE pokemon (
@@ -201,6 +202,30 @@ public class InjectionApp
 
             System.out.println("Database gevuld met 4 pokemon.");
             
+            System.out.println("Create attack table");
+            stmt.execute("""
+                    CREATE TABLE attack (
+                        id BIGINT AUTO_INCREMENT PRIMARY KEY,
+                        name VARCHAR(100),
+                        damage INT,
+                        version INT DEFAULT 1,
+                        pokemon_id BIGINT,
+                        FOREIGN KEY (pokemon_id) REFERENCES pokemon(id)
+                    )
+                """);
+
+            System.out.println("Inserting 8 attacks");
+            stmt.executeUpdate("INSERT INTO attack (name, damage, pokemon_id) VALUES ('Vine Whip', 45, 1)");
+            stmt.executeUpdate("INSERT INTO attack (name, damage, pokemon_id) VALUES ('Solar Beam', 120, 1)");
+            stmt.executeUpdate("INSERT INTO attack (name, damage, pokemon_id) VALUES ('Flamethrower', 90, 2)");
+            stmt.executeUpdate("INSERT INTO attack (name, damage, pokemon_id) VALUES ('Fire Blast', 110, 2)");
+            stmt.executeUpdate("INSERT INTO attack (name, damage, pokemon_id) VALUES ('Water Gun', 40, 3)");
+            stmt.executeUpdate("INSERT INTO attack (name, damage, pokemon_id) VALUES ('Hydro Pump', 110, 3)");
+            stmt.executeUpdate("INSERT INTO attack (name, damage, pokemon_id) VALUES ('Thunderbolt', 90, 4)");
+            stmt.executeUpdate("INSERT INTO attack (name, damage, pokemon_id) VALUES ('Thunder', 110, 4)");
+
+            System.out.println("Database gevuld met 8 attacks.");
+
             System.out.println("Create persons table");
             stmt.execute("DROP TABLE IF EXISTS persons");
             stmt.execute("""
