@@ -1,4 +1,4 @@
-package nl.topicus.injection;
+package nl.topicus.injection.entities;
 
 import nl.topicus.injection.annotation.Column;
 import nl.topicus.injection.annotation.Entity;
@@ -12,7 +12,8 @@ import javax.annotation.Nonnull;
  */
 @Entity
 @Table(name = "fire-pokemon")
-public class FirePokemon extends Pokemon {
+public class FirePokemon extends Pokemon
+{
 
     @Column(name = "weaknesses")
     String weaknesses = "Water";

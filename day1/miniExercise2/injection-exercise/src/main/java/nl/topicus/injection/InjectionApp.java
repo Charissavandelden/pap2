@@ -179,8 +179,7 @@ public class InjectionApp
     private static void setupDatabase(Connection conn) throws SQLException
     {
     	createTable(Pokemon.class, conn);
-    	
-    	
+
         try (Statement stmt = conn.createStatement())
         {
             System.out.println("Create pokemon table");
