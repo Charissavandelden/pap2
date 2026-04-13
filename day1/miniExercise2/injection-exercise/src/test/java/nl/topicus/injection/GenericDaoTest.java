@@ -3,6 +3,9 @@ package nl.topicus.injection;
 import org.h2.jdbcx.JdbcDataSource;
 import org.junit.jupiter.api.*;
 
+import nl.topicus.injection.entities.Attack;
+import nl.topicus.injection.entities.Pokemon;
+
 import javax.sql.DataSource;
 import java.sql.Connection;
 import java.sql.SQLException;

@@ -1,6 +1,9 @@
 package nl.topicus.injection;
 
 import javax.annotation.Nonnull;
+
+import nl.topicus.injection.entities.Pokemon;
+
 import java.sql.SQLException;
 import java.util.List;
 

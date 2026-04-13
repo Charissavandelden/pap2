@@ -95,5 +95,29 @@ class TransactionManagerTest {
             assertEquals(0, rs.getInt(1));
         }
     }
+    
+    @Test
+    void testConcurrency() throws SQLException {
+        Connection conn = transactionManager.begin();
+        conn.setAutoCommit(false);
+
+        try (PreparedStatement stmt = conn.prepareStatement(
+                "INSERT INTO pokemon (name, type) VALUES (?, ?)")) {
+            stmt.setString(1, "Charmander");
+            stmt.setString(2, "Fire");
+            stmt.executeUpdate();
+        }
+        
+        String updateStmt = "UPDATE FROM pokemon WHERE id = ? SET type = ?";
+
+        conn.close();
+
+        try (Connection verifyConn = dataSource.getConnection();
+             Statement stmt = verifyConn.createStatement();
+             ResultSet rs = stmt.executeQuery("SELECT COUNT(*) FROM pokemon")) {
+            rs.next();
+            assertEquals(0, rs.getInt(1));
+        }
+    }
 }
 

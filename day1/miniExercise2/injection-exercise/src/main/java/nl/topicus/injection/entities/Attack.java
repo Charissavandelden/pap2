@@ -1,4 +1,4 @@
-package nl.topicus.injection;
+package nl.topicus.injection.entities;
 
 import nl.topicus.injection.annotation.*;
 

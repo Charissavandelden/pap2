@@ -1,4 +1,4 @@
-package nl.topicus.injection;
+package nl.topicus.injection.entities;
 
 import nl.topicus.injection.annotation.Column;
 import nl.topicus.injection.annotation.Entity;
@@ -23,6 +23,15 @@ public class Pokemon {
 
     @Column(name = "type")
     String type;
+    
+    public Pokemon() {
+    	
+    }
+    
+    public Pokemon(String name, String type) {
+    	this.name = name;
+    	this.type = type;
+    }
 
     @Column(name = "version")
     int version;

@@ -2,6 +2,9 @@ package nl.topicus.injection;
 
 import javax.annotation.Nonnull;
 import javax.sql.DataSource;
+
+import nl.topicus.injection.entities.Pokemon;
+
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;

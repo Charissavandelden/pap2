@@ -3,25 +3,35 @@ package nl.topicus.injection;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
 
+import nl.topicus.injection.entities.GymLeader;
+import nl.topicus.injection.entities.Pokemon;
+import nl.topicus.injection.entities.Trainer;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.lang.reflect.Field;
 import java.net.InetSocketAddress;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.sql.Connection;
+import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.List;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import javax.sql.DataSource;
 
+import org.h2.command.ddl.CreateTable;
+
 public class InjectionApp
 {
+	
     public static void main(String[] args) throws IOException
     {
-        DataSource datasource = TransactionManager.getDataSource();
+    	DataSource datasource = TransactionManager.getDataSource();
         PokemonRepository dao = new PokemonRepository(datasource);
 
         try (Connection conn = datasource.getConnection())
@@ -164,12 +174,16 @@ public class InjectionApp
     }
 
     /**
-     * Maakt de Pokémon-tabel aan en vult deze met startdata.
+     * Maakt de verschillende tabellen aan en vult deze met startdata.
      */
     private static void setupDatabase(Connection conn) throws SQLException
     {
+    	createTable(Pokemon.class, conn);
+    	
+    	
         try (Statement stmt = conn.createStatement())
         {
+            System.out.println("Create pokemon table");
             stmt.execute("DROP TABLE IF EXISTS pokemon");
             stmt.execute("""
                     CREATE TABLE pokemon (
@@ -179,12 +193,26 @@ public class InjectionApp
                         version INT DEFAULT 1
                     )
                 """);
+            
+            System.out.println("Inserting 4 pokemon");
             stmt.executeUpdate("INSERT INTO pokemon (name, type) VALUES ('Bulbasaur', 'Grass')");
             stmt.executeUpdate("INSERT INTO pokemon (name, type) VALUES ('Charizard', 'Fire')");
             stmt.executeUpdate("INSERT INTO pokemon (name, type) VALUES ('Squirtle', 'Water')");
             stmt.executeUpdate("INSERT INTO pokemon (name, type) VALUES ('Pikachu', 'Electric')");
 
             System.out.println("Database gevuld met 4 pokemon.");
+            
+            System.out.println("Create persons table");
+            stmt.execute("DROP TABLE IF EXISTS persons");
+            stmt.execute("""
+                    CREATE TABLE persons (
+                        id BIGINT AUTO_INCREMENT PRIMARY KEY,
+                        name VARCHAR(100),
+                        age INT,
+                        starter VARCHAR(100),
+                        totalBattles INT
+                    )
+                """);
         }
         catch (SQLException e)
         {
@@ -217,5 +245,35 @@ public class InjectionApp
         }
         sb.append("]}");
         return sb.toString();
+    }
+    
+    private static void createTable(Class<?> entityClass, Connection conn)
+    {
+    	String dropIfExist = "DROP TABLE IF EXISTS ?";
+    	String createTable = "CREATE TABLE ? (";
+    	System.out.println("Table for class " + entityClass.getSimpleName());
+    	
+    	Stream.of(entityClass.getFields());
+    	
+    	try (PreparedStatement stmt = conn.prepareStatement(dropIfExist))
+        {
+    		stmt.setString(0, entityClass.getSimpleName());
+            stmt.execute("DROP TABLE IF EXISTS pokemon");
+            stmt.execute("""
+                    CREATE TABLE pokemon (
+                        id BIGINT AUTO_INCREMENT PRIMARY KEY,
+                        name VARCHAR(100),
+                        type VARCHAR(100)
+                    )
+                """);
+        } catch (SQLException e) {
+			System.out.println("Couldn't generate table for entity: " + entityClass.getSimpleName());
+			e.printStackTrace();
+		}
+    }
+    
+    private void printTable(Class<?> entityClass)
+    {
+    	System.out.println("Retrieving all data for entity: " + entityClass.getSimpleName());
     }
 }
