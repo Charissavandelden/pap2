@@ -210,7 +210,7 @@ public abstract class GenericRepository<T> {
      * Sluit de verbinding alleen als het geen actieve transactieverbinding is.
      * Voorkomt dat try-with-resources de ThreadLocal-verbinding van de TransactionManager sluit.
      */
-    private void sluitAlsNietTransactioneel(Connection conn) throws SQLException {
+    protected void sluitAlsNietTransactioneel(Connection conn) throws SQLException {
         if (conn != transactionManager.connection.get()) {
             conn.close();
         }

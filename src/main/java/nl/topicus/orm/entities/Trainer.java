@@ -9,16 +9,16 @@ import nl.topicus.orm.annotation.Inheritance.InheritanceType;
 @Entity
 @Inheritance(type = InheritanceType.SINGLE_TABLE)
 @DiscriminatorValue(value = "TRAINER")
-public class Trainer extends Person{
-	
-	@Column(name = "starter")
-	private Pokemon starter;
+public class Trainer extends Person {
 
-	public Pokemon getStarter() {
+	@Column(name = "starter")
+	private String starter;
+
+	public String getStarter() {
 		return starter;
 	}
 
-	public void setStarter(Pokemon starter) {
+	public void setStarter(String starter) {
 		this.starter = starter;
 	}
 }
