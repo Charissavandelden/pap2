@@ -1,12 +1,9 @@
 package nl.topicus.orm.entities;
 
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
 import nl.topicus.orm.annotation.*;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import javax.annotation.processing.Generated;
 
 /**
  * Vertegenwoordigt een aanval die een Pokémon kan uitvoeren.

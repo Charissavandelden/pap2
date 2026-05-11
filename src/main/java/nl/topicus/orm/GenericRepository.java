@@ -2,6 +2,7 @@ package nl.topicus.orm;
 
 import nl.topicus.orm.mapping.EntityMetadata;
 import nl.topicus.orm.mapping.FieldMetadata;
+import nl.topicus.orm.mapping.RelatieMetadata;
 
 import javax.annotation.Nonnull;
 import java.sql.*;
@@ -45,18 +46,20 @@ public abstract class GenericRepository<T> {
 
         transactionManager.runInTransaction(() -> {
             try {
-                String sql = "SELECT * FROM " + metadata.getTableName();
+                String sql = bouwSelectSql();
                 Connection conn = getConnection();
                 try (PreparedStatement stmt = conn.prepareStatement(sql);
                         ResultSet rs = stmt.executeQuery()) {
                     while (rs.next()) {
-                        results.add(metadata.mapRow(rs));
+                        T entity = metadata.mapRow(rs);
+                        laadRelaties(entity, rs);
+                        results.add(entity);
                     }
                 } finally {
                     sluitAlsNietTransactioneel(conn);
                 }
             } catch (SQLException e) {
-                throw new RuntimeException(e); // must wrap checked exception
+                throw new RuntimeException(e);
             }
         });
 
@@ -75,21 +78,23 @@ public abstract class GenericRepository<T> {
         transactionManager.runInTransaction(() -> {
             try {
                 FieldMetadata idField = vereistIdVeld();
-                String sql = "SELECT * FROM " + metadata.getTableName() + " WHERE " + idField.getColumnName() + " = ?";
+                String sql = bouwSelectSql() + " WHERE " + metadata.getTableName() + "." + idField.getColumnName() + " = ?";
 
                 Connection conn = getConnection();
                 try (PreparedStatement stmt = conn.prepareStatement(sql)) {
                     stmt.setObject(1, id);
                     try (ResultSet rs = stmt.executeQuery()) {
                         if (rs.next()) {
-                            results.add(metadata.mapRow(rs));
+                            T entity = metadata.mapRow(rs);
+                            laadRelaties(entity, rs);
+                            results.add(entity);
                         }
                     }
                 } finally {
                     sluitAlsNietTransactioneel(conn);
                 }
             } catch (SQLException e) {
-                throw new RuntimeException(e); // must wrap checked exception
+                throw new RuntimeException(e);
             }
         });
 
@@ -204,6 +209,63 @@ public abstract class GenericRepository<T> {
                 throw new RuntimeException(e);
             }
         });
+    }
+
+    /**
+     * Bouwt een SELECT-query met LEFT JOINs voor alle @ManyToOne relaties.
+     */
+    private String bouwSelectSql() {
+        StringBuilder sql = new StringBuilder("SELECT " + metadata.getTableName() + ".* ");
+        StringBuilder joins = new StringBuilder(" FROM " + metadata.getTableName());
+
+        for (RelatieMetadata relatie : metadata.getRelatieVelden()) {
+            if (relatie.getRelatieType() == RelatieMetadata.RelatieType.MANY_TO_ONE) {
+                EntityMetadata<?> gerelateerdeMeta = new EntityMetadata<>(relatie.getGerelateerdeKlasse());
+                String gerelateerdeTabel = gerelateerdeMeta.getTableName();
+                // Prefix gerelateerde kolommen met tabelnaam om conflicten te vermijden
+                for (FieldMetadata veld : gerelateerdeMeta.getAllFields()) {
+                    sql.append(", ").append(gerelateerdeTabel).append(".").append(veld.getColumnName())
+                       .append(" AS ").append(gerelateerdeTabel).append("_").append(veld.getColumnName());
+                }
+                joins.append(" LEFT JOIN ").append(gerelateerdeTabel)
+                     .append(" ON ").append(metadata.getTableName()).append(".").append(relatie.getJoinKolom())
+                     .append(" = ").append(gerelateerdeTabel).append(".id");
+            }
+        }
+        return sql.append(joins).toString();
+    }
+
+    /**
+     * Vult @ManyToOne relatie-velden op het entity-object via de JOIN-resultaten.
+     */
+    @SuppressWarnings("unchecked")
+    private void laadRelaties(T entity, ResultSet rs) throws SQLException {
+        for (RelatieMetadata relatie : metadata.getRelatieVelden()) {
+            if (relatie.getRelatieType() == RelatieMetadata.RelatieType.MANY_TO_ONE) {
+                try {
+                    EntityMetadata gerelateerdeMeta = new EntityMetadata<>(relatie.getGerelateerdeKlasse());
+                    String gerelateerdeTabel = gerelateerdeMeta.getTableName();
+                    // Controleer of er een gerelateerd object is (join kolom niet null)
+                    Object joinWaarde = rs.getObject(relatie.getJoinKolom());
+                    if (joinWaarde == null) continue;
+
+                    Object gerelateerd = relatie.getGerelateerdeKlasse().getDeclaredConstructor().newInstance();
+                    // Id zetten
+                    if (gerelateerdeMeta.getIdField() != null) {
+                        Object idWaarde = rs.getObject(gerelateerdeTabel + "_" + gerelateerdeMeta.getIdField().getColumnName());
+                        gerelateerdeMeta.getIdField().setValue(gerelateerd, idWaarde);
+                    }
+                    // Overige velden zetten via de prefixed alias-namen
+                    for (FieldMetadata veld : (LinkedHashSet<FieldMetadata>) gerelateerdeMeta.getAllFields()) {
+                        Object waarde = rs.getObject(gerelateerdeTabel + "_" + veld.getColumnName());
+                        veld.setValue(gerelateerd, waarde);
+                    }
+                    relatie.getField().set(entity, gerelateerd);
+                } catch (ReflectiveOperationException e) {
+                    throw new SQLException("Fout bij laden van relatie " + relatie.getField().getName(), e);
+                }
+            }
+        }
     }
 
     /**

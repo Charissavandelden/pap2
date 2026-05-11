@@ -32,7 +32,7 @@ class GenericDaoTest {
         try (Connection conn = dataSource.getConnection();
              Statement stmt = conn.createStatement()) {
             stmt.execute("CREATE TABLE IF NOT EXISTS pokemon (id BIGINT AUTO_INCREMENT PRIMARY KEY, name VARCHAR(100), type VARCHAR(100), version INT DEFAULT 1)");
-            stmt.execute("CREATE TABLE IF NOT EXISTS attack (id BIGINT AUTO_INCREMENT PRIMARY KEY, name VARCHAR(100), damage INT, version INT DEFAULT 1)");
+            stmt.execute("CREATE TABLE IF NOT EXISTS attack (id BIGINT AUTO_INCREMENT PRIMARY KEY, name VARCHAR(100), damage INT, version INT DEFAULT 1, pokemon_id BIGINT)");
         }
     }
 
