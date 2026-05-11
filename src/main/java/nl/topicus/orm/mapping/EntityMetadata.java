@@ -11,12 +11,13 @@ import java.util.stream.Stream;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 
-import jakarta.persistence.ManyToOne;
-import jakarta.persistence.OneToMany;
 import nl.topicus.orm.annotation.Column;
 import nl.topicus.orm.annotation.DiscriminatorColumn;
 import nl.topicus.orm.annotation.DiscriminatorValue;
 import nl.topicus.orm.annotation.Id;
+import nl.topicus.orm.annotation.JoinColumn;
+import nl.topicus.orm.annotation.ManyToOne;
+import nl.topicus.orm.annotation.OneToMany;
 import nl.topicus.orm.annotation.Table;
 
 /**
@@ -30,6 +31,7 @@ public class EntityMetadata<T> {
     @Nullable
     private final FieldMetadata idField;
     private final LinkedHashSet<FieldMetadata> allFields = new LinkedHashSet<>();
+    private final LinkedHashSet<RelatieMetadata> relatieVelden = new LinkedHashSet<>();
     private Class<?> rootEntity;
     private final DiscriminatorColumn discriminatorColumn;
     private final java.util.Map<String, EntityMetadata<? extends T>> subtypes = new java.util.HashMap<>();
@@ -65,8 +67,12 @@ public class EntityMetadata<T> {
                     boolean hasDefaultValue = column.defaultValue() >= 1;
                     Object defaultValue = hasDefaultValue ? column.defaultValue() : null;
                     allFields.add(new FieldMetadata(field, colName, defaultValue));
-                } else if (field.isAnnotationPresent(OneToMany.class) || field.isAnnotationPresent(ManyToOne.class)) {
-                    // relatie-velden worden in Middag 4 uitgewerkt
+                } else if (field.isAnnotationPresent(ManyToOne.class) && field.isAnnotationPresent(JoinColumn.class)) {
+                    JoinColumn joinColumn = field.getAnnotation(JoinColumn.class);
+                    relatieVelden.add(new RelatieMetadata(field, joinColumn.name(), RelatieMetadata.RelatieType.MANY_TO_ONE));
+                } else if (field.isAnnotationPresent(OneToMany.class)) {
+                    OneToMany oneToMany = field.getAnnotation(OneToMany.class);
+                    relatieVelden.add(new RelatieMetadata(field, oneToMany.mappedBy(), RelatieMetadata.RelatieType.ONE_TO_MANY));
                 }
             }
             huidig = huidig.getSuperclass();
@@ -111,6 +117,11 @@ public class EntityMetadata<T> {
     
     public DiscriminatorColumn getDiscriminatorColumn() {
     	return discriminatorColumn;
+    }
+
+    @Nonnull
+    public LinkedHashSet<RelatieMetadata> getRelatieVelden() {
+        return relatieVelden;
     }
     
     public void registerSubtype(String discriminatorWaarde, EntityMetadata<? extends T> childMetadata) {

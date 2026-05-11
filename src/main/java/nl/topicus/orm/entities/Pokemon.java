@@ -1,11 +1,6 @@
 package nl.topicus.orm.entities;
 
-import jakarta.persistence.CascadeType;
-import jakarta.persistence.OneToMany;
-import nl.topicus.orm.annotation.Column;
-import nl.topicus.orm.annotation.Entity;
-import nl.topicus.orm.annotation.Id;
-import nl.topicus.orm.annotation.Table;
+import nl.topicus.orm.annotation.*;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -31,7 +26,7 @@ public class Pokemon {
     @Column(name = "version", defaultValue = 1)
     int version;
 
-    @OneToMany(mappedBy = "attack", cascade = CascadeType.PERSIST)
+    @OneToMany(mappedBy = "pokemon")
     private List<Attack> attacks = new ArrayList<>();
 
     public Pokemon() {
