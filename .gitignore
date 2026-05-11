@@ -1,40 +1,13 @@
-# macOS
-.DS_Store
-.AppleDouble
-.LSOverride
-*.swp
-*.swo
-*~
-.Spotlight-V100
-.Trashes
+# Database files
+data/miauw.mv.db
+data/miauw.trace.db
 
-# IntelliJ
-.idea/
-*.iml
-*.iws
-*.ipr
-*.swp
-*.swo
-*~
-out/
-.gradle/
-build/
+# Maven build output
 target/
 
-# VS Code
-.vscode/
-
-# Node (if applicable)
-node_modules/
-npm-debug.log
-
-# Python (if applicable)
-__pycache__/
-*.py[cod]
-*$py.class
-venv/
-env/
-
-# General
-*.log
-.env
+# IDE files
+.classpath
+.project
+.settings/
+*.iml
+.idea/
