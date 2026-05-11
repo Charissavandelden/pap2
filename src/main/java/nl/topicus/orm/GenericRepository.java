@@ -24,11 +24,6 @@ public abstract class GenericRepository<T> {
     protected final EntityMetadata<T> metadata;
     TransactionManager transactionManager;
 
-    protected GenericRepository(@Nonnull Class<T> entityClass) {
-        this.metadata = new EntityMetadata<>(entityClass);
-        this.transactionManager = new TransactionManager();
-    }
-
     protected GenericRepository(@Nonnull Class<T> entityClass, @Nonnull TransactionManager transactionManager) {
         this.metadata = new EntityMetadata<>(entityClass);
         this.transactionManager = transactionManager;
@@ -51,12 +46,14 @@ public abstract class GenericRepository<T> {
         transactionManager.runInTransaction(() -> {
             try {
                 String sql = "SELECT * FROM " + metadata.getTableName();
-                try (Connection conn = getConnection();
-                        PreparedStatement stmt = conn.prepareStatement(sql);
+                Connection conn = getConnection();
+                try (PreparedStatement stmt = conn.prepareStatement(sql);
                         ResultSet rs = stmt.executeQuery()) {
                     while (rs.next()) {
                         results.add(metadata.mapRow(rs));
                     }
+                } finally {
+                    sluitAlsNietTransactioneel(conn);
                 }
             } catch (SQLException e) {
                 throw new RuntimeException(e); // must wrap checked exception
@@ -80,14 +77,16 @@ public abstract class GenericRepository<T> {
                 FieldMetadata idField = vereistIdVeld();
                 String sql = "SELECT * FROM " + metadata.getTableName() + " WHERE " + idField.getColumnName() + " = ?";
 
-                try (Connection conn = getConnection();
-                        PreparedStatement stmt = conn.prepareStatement(sql)) {
+                Connection conn = getConnection();
+                try (PreparedStatement stmt = conn.prepareStatement(sql)) {
                     stmt.setObject(1, id);
                     try (ResultSet rs = stmt.executeQuery()) {
                         if (rs.next()) {
                             results.add(metadata.mapRow(rs));
                         }
                     }
+                } finally {
+                    sluitAlsNietTransactioneel(conn);
                 }
             } catch (SQLException e) {
                 throw new RuntimeException(e); // must wrap checked exception
@@ -111,8 +110,8 @@ public abstract class GenericRepository<T> {
                 String placeholders = allFields.stream().map(f -> "?").collect(Collectors.joining(", "));
                 String sql = "INSERT INTO " + metadata.getTableName() + " (" + cols + ") VALUES (" + placeholders + ")";
                 
-                try (Connection conn = getConnection();
-                     PreparedStatement stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+                Connection conn = getConnection();
+                try (PreparedStatement stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
                 	Iterator<FieldMetadata> fieldIterator = allFields.iterator();
                 	int index = 1;
                 	while (fieldIterator.hasNext())
@@ -127,6 +126,8 @@ public abstract class GenericRepository<T> {
                             metadata.getIdField().setValue(entity, keys.getLong(1));
                         }
                     }
+                } finally {
+                    sluitAlsNietTransactioneel(conn);
                 }
             } catch (SQLException | IllegalAccessException e) {
                 throw new RuntimeException("Fout bij opslaan van " + entity.getClass().getSimpleName(), e);
@@ -159,8 +160,8 @@ public abstract class GenericRepository<T> {
                         + " WHERE " + idField.getColumnName() + " = ?"
                         + (versieVeld.isPresent() ? " AND version = ?" : "");
 
-                try (Connection conn = getConnection();
-                     PreparedStatement stmt = conn.prepareStatement(sql)) {
+                Connection conn = getConnection();
+                try (PreparedStatement stmt = conn.prepareStatement(sql)) {
                     int index = 1;
                     for (FieldMetadata field : allFields) {
                         if (!field.getColumnName().equals("version")) {
@@ -173,6 +174,8 @@ public abstract class GenericRepository<T> {
                         stmt.setObject(index + 1, versieVeld.get().getValue(entity));
                     }
                     stmt.executeUpdate();
+                } finally {
+                    sluitAlsNietTransactioneel(conn);
                 }
             } catch (SQLException | IllegalAccessException e) {
                 throw new RuntimeException("Fout bij updaten van " + entity.getClass().getSimpleName(), e);
@@ -190,15 +193,27 @@ public abstract class GenericRepository<T> {
             try {
                 FieldMetadata idField = vereistIdVeld();
                 String sql = "DELETE FROM " + metadata.getTableName() + " WHERE " + idField.getColumnName() + " = ?";
-                try (Connection conn = getConnection();
-                     PreparedStatement stmt = conn.prepareStatement(sql)) {
+                Connection conn = getConnection();
+                try (PreparedStatement stmt = conn.prepareStatement(sql)) {
                     stmt.setObject(1, id);
                     stmt.executeUpdate();
+                } finally {
+                    sluitAlsNietTransactioneel(conn);
                 }
             } catch (SQLException e) {
                 throw new RuntimeException(e);
             }
         });
+    }
+
+    /**
+     * Sluit de verbinding alleen als het geen actieve transactieverbinding is.
+     * Voorkomt dat try-with-resources de ThreadLocal-verbinding van de TransactionManager sluit.
+     */
+    private void sluitAlsNietTransactioneel(Connection conn) throws SQLException {
+        if (conn != transactionManager.connection.get()) {
+            conn.close();
+        }
     }
 
     /**
@@ -222,8 +237,8 @@ public abstract class GenericRepository<T> {
                 String placeholders = allFields.stream().map(f -> "?").collect(Collectors.joining(", "));
                 String sql = "INSERT INTO " + metadata.getTableName() + " (" + cols + ") VALUES (" + placeholders + ")";
 
-                try (Connection conn = getConnection();
-                        PreparedStatement stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+                Connection conn = getConnection();
+                try (PreparedStatement stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
                     for (T entity : list) {
                         Iterator<FieldMetadata> fieldIterator = allFields.iterator();
                         int index = 1;
@@ -247,7 +262,9 @@ public abstract class GenericRepository<T> {
 				catch (IllegalAccessException e)
 				{
 					throw new RuntimeException(e);
-				}
+				} finally {
+                    sluitAlsNietTransactioneel(conn);
+                }
 			} catch (SQLException e) {
                 for(T entity: list) {
                     throw new RuntimeException("Fout bij opslaan van " + entity.getClass().getSimpleName(), e);
@@ -268,8 +285,8 @@ public abstract class GenericRepository<T> {
                 String sql = "UPDATE " + metadata.getTableName() + " SET " + setClauses
                         + " WHERE " + idField.getColumnName() + " = ?";
 
-                try (Connection conn = getConnection();
-                        PreparedStatement stmt = conn.prepareStatement(sql)) {
+                Connection conn = getConnection();
+                try (PreparedStatement stmt = conn.prepareStatement(sql)) {
                     for (T entity : list) {
                         Iterator<FieldMetadata> fieldIterator = allFields.iterator();
                         int index = 1;
@@ -281,6 +298,8 @@ public abstract class GenericRepository<T> {
                         stmt.addBatch();
                     }
                     stmt.executeBatch();
+                } finally {
+                    sluitAlsNietTransactioneel(conn);
                 }
             } catch (SQLException | IllegalAccessException e) {
                 for(T entity: list)

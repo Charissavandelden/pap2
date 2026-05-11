@@ -41,7 +41,7 @@ public class PokemonRepository extends AbstractDataSourceRepository<Pokemon> imp
      * Voert een SELECT-query uit met een LIKE-filter op de opgegeven kolom.
      */
     private List<Pokemon> zoekMetLike(@Nonnull String kolom, @Nonnull String waarde) throws SQLException {
-        TransactionManager transactionManager = new TransactionManager();
+        TransactionManager transactionManager = this.transactionManager;
                 List<Pokemon> results = new ArrayList<>();
 
 

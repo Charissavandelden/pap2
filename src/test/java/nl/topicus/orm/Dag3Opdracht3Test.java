@@ -42,7 +42,7 @@ public class Dag3Opdracht3Test
 
 	@BeforeEach
 	void setup() throws SQLException {
-		transactionManager = new TransactionManager(dataSource);
+		transactionManager = TransactionManager.getInstance(dataSource);
 
 		try (Connection conn = dataSource.getConnection();
 				Statement stmt = conn.createStatement()) {

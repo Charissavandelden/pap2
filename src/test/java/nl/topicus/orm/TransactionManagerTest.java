@@ -32,7 +32,7 @@ class TransactionManagerTest {
 
     @BeforeEach
     void setup() throws SQLException {
-        transactionManager = new TransactionManager(dataSource);
+        transactionManager = TransactionManager.getInstance(dataSource);
 
         try (Connection conn = dataSource.getConnection();
              Statement stmt = conn.createStatement()) {
@@ -85,8 +85,6 @@ class TransactionManagerTest {
         }
 
         transactionManager.rollback(conn);
-        conn.setAutoCommit(true);
-        conn.close();
 
         try (Connection verifyConn = dataSource.getConnection();
              Statement stmt = verifyConn.createStatement();

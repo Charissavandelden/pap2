@@ -8,23 +8,22 @@ import java.sql.SQLException;
 
 public class TransactionManager extends ConnectionManager {
 
-	//TODO: Deze class moet een SINGLETON worden, zodat we deze overal kunnen gebruiken.
+	private static final java.util.Map<DataSource, TransactionManager> instances = new java.util.concurrent.ConcurrentHashMap<>();
 
 	@Nullable
 	private final DataSource injectedDataSource;
 
 	ThreadLocal<Connection> connection = new ThreadLocal<>();
 
-	public TransactionManager()
-	{
-		super();
-		this.injectedDataSource = null;
-	}
-
-	public TransactionManager(@Nonnull DataSource dataSource)
+	private TransactionManager(@Nonnull DataSource dataSource)
 	{
 		super();
 		this.injectedDataSource = dataSource;
+	}
+
+	public static TransactionManager getInstance(@Nonnull DataSource dataSource)
+	{
+		return instances.computeIfAbsent(dataSource, TransactionManager::new);
 	}
 
 	public Connection begin() throws SQLException {
@@ -35,38 +34,31 @@ public class TransactionManager extends ConnectionManager {
 	
 	public void commit(Connection conn) throws SQLException
 	{
-		//TODO: Logica implementeren voor commit, terugzetten van autocommit en het closen van de connection
-
 		conn.commit();
+		conn.close();
+		connection.remove();
 		System.out.println("Transaction: succeeded");
 	}
 
 	public void rollback(Connection conn) throws SQLException
 	{
-		//TODO: Logica implementeren voor rollback, terugzetten van autocommit en het closen van de connection
-
 		conn.rollback();
+		conn.close();
+		connection.remove();
 		System.out.println("Transaction: failed ):");
 	}
 
 	public void runInTransaction(Runnable runnable) throws SQLException
 	{
 		begin();
-
-		connection.get().setAutoCommit(false);
 		Connection conn = connection.get();
-		//TODO: Met deze methode is bedoeld als wrapper om een stuk sql bewerking, dat in zijn geheel moet slagen of falen
+		conn.setAutoCommit(false);
 		try {
 			runnable.run();
-
 			commit(conn);
-		} catch (SQLException e) {
-			rollback(connection.get());
-
-			throw new SQLException("Transaction failed", e);
-//			e.printStackTrace();
-		} finally {
-			conn.setAutoCommit(true);
+		} catch (Exception e) {
+			rollback(conn);
+			throw new RuntimeException("Transaction failed", e);
 		}
 	}
 }
