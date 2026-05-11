@@ -3,30 +3,28 @@ package nl.topicus.orm;
 import org.junit.jupiter.api.Test;
 
 import javax.sql.DataSource;
-
+import java.sql.Connection;
 import java.sql.SQLException;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-import java.sql.Connection;
-import java.sql.SQLException;
 class ConnectionManagerTest {
 
 	@Test
-	public void testDataSource() throws SQLException
-	{
-		DataSource ds = TransactionManager.getDataSource();
-		assertNotNull(ds.getConnection());
-		
-		try {
-			Connection connection = ds.getConnection();
-			assertFalse(connection.isClosed());
-			
-			connection.close();
-			assertTrue(connection.isClosed());
-			
-		} catch (SQLException e) {
-			System.out.println(e.getMessage());
+	void dataSourceLevertEenWerkendeConnectie() throws SQLException {
+		DataSource ds = ConnectionManager.getDataSource();
+
+		try (Connection conn = ds.getConnection()) {
+			assertFalse(conn.isClosed(), "Connectie moet open zijn direct na openen");
 		}
+	}
+
+	@Test
+	void connectieIsGeslotenNaClose() throws SQLException {
+		DataSource ds = ConnectionManager.getDataSource();
+
+		Connection conn = ds.getConnection();
+		conn.close();
+		assertTrue(conn.isClosed(), "Connectie moet gesloten zijn na close()");
 	}
 }
