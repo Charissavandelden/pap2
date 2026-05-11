@@ -6,7 +6,7 @@ import javax.sql.DataSource;
 import java.sql.Connection;
 import java.sql.SQLException;
 
-public class TransactionManager extends ConnectionManager {
+public class TransactionManager {
 
 	//TODO: Deze class moet een SINGLETON worden, zodat we deze overal kunnen gebruiken.
 
@@ -17,18 +17,16 @@ public class TransactionManager extends ConnectionManager {
 
 	public TransactionManager()
 	{
-		super();
 		this.injectedDataSource = null;
 	}
 
 	public TransactionManager(@Nonnull DataSource dataSource)
 	{
-		super();
 		this.injectedDataSource = dataSource;
 	}
 
 	public Connection begin() throws SQLException {
-		DataSource ds = (injectedDataSource != null) ? injectedDataSource : getDataSource();
+		DataSource ds = (injectedDataSource != null) ? injectedDataSource : ConnectionManager.getDataSource();
 		connection.set(ds.getConnection());
 		return connection.get();
 	}

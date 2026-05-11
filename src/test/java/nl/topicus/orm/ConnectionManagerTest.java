@@ -27,4 +27,20 @@ class ConnectionManagerTest {
 		conn.close();
 		assertTrue(conn.isClosed(), "Connectie moet gesloten zijn na close()");
 	}
+
+	@Test
+	void instantieDeeltConnectieUit() throws SQLException {
+		ConnectionManager cm = new ConnectionManager();
+
+		try (Connection conn = cm.getConnection()) {
+			assertFalse(conn.isClosed(), "getConnection() moet een open connectie teruggeven");
+		}
+	}
+
+	@Test
+	void closeIsNullSafe() {
+		ConnectionManager cm = new ConnectionManager();
+
+		assertDoesNotThrow(() -> cm.close(null));
+	}
 }
