@@ -30,9 +30,9 @@ public class EntityMetadata<T> {
     @Nullable
     private final FieldMetadata idField;
     private final LinkedHashSet<FieldMetadata> allFields = new LinkedHashSet<>();
-//    private final List<FieldMetadata> nonIdFields;
     private Class<?> rootEntity;
     private final DiscriminatorColumn discriminatorColumn;
+    private final java.util.Map<String, EntityMetadata<? extends T>> subtypes = new java.util.HashMap<>();
 
     /**
      * Verwerkt de annotaties van de opgegeven entiteitsklasse en bouwt de mapping op.
@@ -113,8 +113,13 @@ public class EntityMetadata<T> {
     	return discriminatorColumn;
     }
     
+    public void registerSubtype(String discriminatorWaarde, EntityMetadata<? extends T> childMetadata) {
+        subtypes.put(discriminatorWaarde, childMetadata);
+        allFields.addAll(childMetadata.getAllFields());
+    }
+
     public <C extends T> void registerChild(EntityMetadata<?> childMetadata) {
-    	allFields.addAll(childMetadata.getAllFields());
+        allFields.addAll(childMetadata.getAllFields());
     }
 
     /**
@@ -126,7 +131,18 @@ public class EntityMetadata<T> {
     @Nonnull
     public T mapRow(@Nonnull ResultSet rs) throws SQLException {
         try {
-            T instance = entityClass.getDeclaredConstructor().newInstance();
+            // Bepaal welke klasse aangemaakt moet worden op basis van de discriminator
+            Class<?> doelKlasse = entityClass;
+            if (discriminatorColumn != null && !subtypes.isEmpty()) {
+                String discriminatorWaarde = rs.getString(discriminatorColumn.name());
+                EntityMetadata<? extends T> subtype = subtypes.get(discriminatorWaarde);
+                if (subtype != null) {
+                    return subtype.mapRow(rs);
+                }
+            }
+
+            @SuppressWarnings("unchecked")
+            T instance = (T) doelKlasse.getDeclaredConstructor().newInstance();
             if (idField != null) {
                 Object idValue = rs.getObject(idField.getColumnName());
                 idValue = convertType(idValue, idField.getField().getType());

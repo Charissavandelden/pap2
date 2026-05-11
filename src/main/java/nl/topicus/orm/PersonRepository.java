@@ -10,16 +10,21 @@ import java.util.List;
 import javax.annotation.Nonnull;
 import javax.sql.DataSource;
 
+import nl.topicus.orm.entities.GymLeader;
 import nl.topicus.orm.entities.Person;
+import nl.topicus.orm.entities.Trainer;
+import nl.topicus.orm.mapping.EntityMetadata;
 
 /**
  * DAO voor het beheren van {@link Person} entiteiten.
- * Erft de vijf generieke CRUD-operaties en voegt Person-specifieke zoekmethoden toe.
+ * Registreert subtypes zodat findAll() een mix van Trainer en GymLeader teruggeeft.
  */
 public class PersonRepository extends AbstractDataSourceRepository<Person> {
 
     public PersonRepository(@Nonnull DataSource datasource) {
         super(Person.class, datasource);
+        metadata.registerSubtype("TRAINER", new EntityMetadata<>(Trainer.class));
+        metadata.registerSubtype("GYM_LEADER", new EntityMetadata<>(GymLeader.class));
     }
 
     public List<Person> findByName(@Nonnull String name) throws SQLException {
@@ -27,46 +32,23 @@ public class PersonRepository extends AbstractDataSourceRepository<Person> {
     }
 
     private List<Person> zoekMetLike(@Nonnull String kolom, @Nonnull String waarde) throws SQLException {
-        TransactionManager transactionManager = this.transactionManager;
-                List<Person> results = new ArrayList<>();
-
-
-        transactionManager.runInTransaction(() -> {
-            try {
-                String sql = "SELECT * FROM persons WHERE " + kolom + " LIKE ?";
-
-                Connection conn = getConnection();
-                PreparedStatement stmt = conn.prepareStatement(sql);
-                stmt.setString(1, "%" + waarde + "%");
-                try (ResultSet rs = stmt.executeQuery()) {
-                    while (rs.next()) {
-                        results.add(metadata.mapRow(rs));
-                    }
-                }
-            } catch (SQLException e) {
-                throw new RuntimeException(e); // must wrap checked exception
-            }
-        });
-
-        return results;
-    }
-    
-    @Override
-    @Nonnull
-    public List<Person> findAll() throws SQLException {
         List<Person> results = new ArrayList<>();
         transactionManager.runInTransaction(() -> {
             try {
-                String sql = "SELECT * FROM " + metadata.getTableName();
-                try (Connection conn = getConnection();
-                        PreparedStatement stmt = conn.prepareStatement(sql);
-                        ResultSet rs = stmt.executeQuery()) {
-                    while (rs.next()) {
-                        results.add(metadata.mapRow(rs));
+                String sql = "SELECT * FROM persons WHERE " + kolom + " LIKE ?";
+                Connection conn = getConnection();
+                try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+                    stmt.setString(1, "%" + waarde + "%");
+                    try (ResultSet rs = stmt.executeQuery()) {
+                        while (rs.next()) {
+                            results.add(metadata.mapRow(rs));
+                        }
                     }
+                } finally {
+                    sluitAlsNietTransactioneel(conn);
                 }
             } catch (SQLException e) {
-                throw new RuntimeException(e); // must wrap checked exception
+                throw new RuntimeException(e);
             }
         });
         return results;
