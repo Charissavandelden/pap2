@@ -28,7 +28,7 @@ public class Pokemon {
     @Column(name = "type")
     String type;
 
-    @Column(name = "version")
+    @Column(name = "version", defaultValue = 1)
     int version;
 
     @OneToMany(mappedBy = "attack", cascade = CascadeType.PERSIST)

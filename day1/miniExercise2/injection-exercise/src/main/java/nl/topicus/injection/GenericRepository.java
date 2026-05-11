@@ -6,6 +6,8 @@ import nl.topicus.injection.mapping.FieldMetadata;
 import javax.annotation.Nonnull;
 import java.sql.*;
 import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -104,17 +106,22 @@ public abstract class GenericRepository<T> {
     public void save(@Nonnull T entity) throws SQLException {
         transactionManager.runInTransaction(() -> {
             try {
-                List<FieldMetadata> nonIdFields = metadata.getNonIdFields();
-                String cols = nonIdFields.stream().map(FieldMetadata::getColumnName).collect(Collectors.joining(", "));
-                String placeholders = nonIdFields.stream().map(f -> "?").collect(Collectors.joining(", "));
+                LinkedHashSet<FieldMetadata> allFields = metadata.getAllFields();
+                String cols = allFields.stream().map(FieldMetadata::getColumnName).collect(Collectors.joining(", "));
+                String placeholders = allFields.stream().map(f -> "?").collect(Collectors.joining(", "));
                 String sql = "INSERT INTO " + metadata.getTableName() + " (" + cols.toUpperCase() + ") VALUES (" + placeholders + ")";
-
+                
                 try (Connection conn = getConnection();
                      PreparedStatement stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
-                    for (int i = 0; i < nonIdFields.size(); i++) {
-                        stmt.setObject(i + 1, nonIdFields.get(i).getValue(entity));
-                    }
+                	Iterator<FieldMetadata> fieldIterator = allFields.iterator();
+                	int index = 1;
+                	while (fieldIterator.hasNext())
+                	{
+                		stmt.setObject(index, fieldIterator.next().getValue(entity));
+                		index++;
+                	}
                     stmt.executeUpdate();
+                    System.out.println(stmt);
                     try (ResultSet keys = stmt.getGeneratedKeys()) {
                         if (keys.next() && metadata.getIdField() != null) {
                             metadata.getIdField().setValue(entity, keys.getLong(1));
@@ -135,10 +142,10 @@ public abstract class GenericRepository<T> {
      */
     public void update(@Nonnull T entity) throws SQLException {
         transactionManager.runInTransaction(() -> {
-            try {
+        	try {
                 FieldMetadata idField = vereistIdVeld();
-                List<FieldMetadata> nonIdFields = metadata.getNonIdFields();
-                String setClauses = nonIdFields.stream()
+                LinkedHashSet<FieldMetadata> allFields = metadata.getAllFields();
+                String setClauses = allFields.stream()
                         .map(f -> f.getColumnName() + " = ?")
                         .map(s -> s.equals("version") ? s + " + 1" : s) // increment version
                         .collect(Collectors.joining(", "));
@@ -147,11 +154,15 @@ public abstract class GenericRepository<T> {
 
                 try (Connection conn = getConnection();
                      PreparedStatement stmt = conn.prepareStatement(sql)) {
-                    for (int i = 0; i < nonIdFields.size(); i++) {
-                        stmt.setObject(i + 1, nonIdFields.get(i).getValue(entity));
-                    }
-                    stmt.setObject(nonIdFields.size() + 1, idField.getValue(entity));
-                    stmt.setObject(nonIdFields.size() + 2, metadata.getNonIdFields().stream().filter(s -> s.getColumnName().equals("version")).findFirst().get().getValue(entity));
+                	int index = 1;
+                	Iterator<FieldMetadata> fieldIterator = allFields.iterator();
+                	while (fieldIterator.hasNext())
+                	{
+                		stmt.setObject(index, fieldIterator.next().getValue(entity));
+                		index++;
+                	}
+                    stmt.setObject(allFields.size() + 1, idField.getValue(entity));
+                    stmt.setObject(allFields.size() + 2, metadata.getAllFields().stream().filter(s -> s.getColumnName().equals("version")).findFirst().get().getValue(entity));
                     stmt.executeUpdate();
                 }
             } catch (SQLException | IllegalAccessException e) {
@@ -197,26 +208,30 @@ public abstract class GenericRepository<T> {
     public void saveAll(@Nonnull List<T> list) throws SQLException {
         transactionManager.runInTransaction(() -> {
             try {
-                List<FieldMetadata> nonIdFields = metadata.getNonIdFields();
-                String cols = nonIdFields.stream().map(FieldMetadata::getColumnName).collect(Collectors.joining(", "));
-                String placeholders = nonIdFields.stream().map(f -> "?").collect(Collectors.joining(", "));
+                LinkedHashSet<FieldMetadata> allFields = metadata.getAllFields();
+                String cols = allFields.stream().map(FieldMetadata::getColumnName).collect(Collectors.joining(", "));
+                String placeholders = allFields.stream().map(f -> "?").collect(Collectors.joining(", "));
                 String sql = "INSERT INTO " + metadata.getTableName() + " (" + cols + ") VALUES (" + placeholders + ")";
 
                 try (Connection conn = getConnection();
                         PreparedStatement stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
-                    for(T entity: list)
+                    for(T entity: list) 
                     {
-                       for (int i = 0; i < nonIdFields.size(); i++) {
-                            stmt.setObject(i + 1, nonIdFields.get(i).getValue(entity));
-                       }
+                    	Iterator<FieldMetadata> fieldIterator = allFields.iterator();
+                    	int index = 1;
+                    	while (fieldIterator.hasNext())
+                    	{
+                    		stmt.setObject(index, fieldIterator.next().getValue(entity));
+                    		index++;
+                    	}
                         stmt.addBatch();
                         try (ResultSet keys = stmt.getGeneratedKeys()) {
                             if (keys.next() && metadata.getIdField() != null) {
                                 metadata.getIdField().setValue(entity, keys.getLong(1));
                             }
                         }
-                        stmt.executeBatch();
-                }
+                    }
+                    stmt.executeBatch();
                 }
 				catch (IllegalAccessException e)
 				{
@@ -235,8 +250,8 @@ public abstract class GenericRepository<T> {
         transactionManager.runInTransaction(() -> {
             try {
                 FieldMetadata idField = vereistIdVeld();
-                List<FieldMetadata> nonIdFields = metadata.getNonIdFields();
-                String setClauses = nonIdFields.stream()
+                LinkedHashSet<FieldMetadata> allFields = metadata.getAllFields();
+                String setClauses = allFields.stream()
                         .map(f -> f.getColumnName() + " = ?")
                         .collect(Collectors.joining(", "));
                 String sql = "UPDATE " + metadata.getTableName() + " SET " + setClauses
@@ -244,20 +259,24 @@ public abstract class GenericRepository<T> {
 
                 try (Connection conn = getConnection();
                         PreparedStatement stmt = conn.prepareStatement(sql)) {
-
                     for(T entity: list)
                     {
-                        for (int i = 0; i < nonIdFields.size(); i++) {
-                            stmt.setObject(i + 1, nonIdFields.get(i).getValue(entity));
+                    	Iterator<FieldMetadata> fieldIterator = allFields.iterator();
+                    	int index = 1;
+                    	while (fieldIterator.hasNext())
+                    	{
+                    		stmt.setObject(index, fieldIterator.next().getValue(entity));
+                    		index++;
+                    	}
+                        for (int i = 0; i < allFields.size(); i++) {
                         }
-                        stmt.setObject(nonIdFields.size() + 1, idField.getValue(entity));
+                        stmt.setObject(allFields.size() + 1, idField.getValue(entity));
                         stmt.addBatch();
 
                         stmt.executeBatch();
                     }
                 }
             } catch (SQLException | IllegalAccessException e) {
-
                 for(T entity: list)
                 {
                     throw new RuntimeException("Fout bij updaten van " + entity.getClass().getSimpleName(), e);

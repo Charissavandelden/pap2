@@ -1,19 +1,23 @@
 package nl.topicus.injection.mapping;
 
-import nl.topicus.injection.annotation.Column;
-import nl.topicus.injection.annotation.Id;
-import nl.topicus.injection.annotation.Table;
-
-import javax.annotation.Nonnull;
-import javax.annotation.Nullable;
 import java.lang.reflect.Field;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashSet;
-import java.util.List;
+import java.util.LinkedHashSet;
 import java.util.Set;
+import java.util.stream.Stream;
+
+import javax.annotation.Nonnull;
+import javax.annotation.Nullable;
+
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToMany;
+import nl.topicus.injection.annotation.Column;
+import nl.topicus.injection.annotation.DiscriminatorColumn;
+import nl.topicus.injection.annotation.DiscriminatorValue;
+import nl.topicus.injection.annotation.Id;
+import nl.topicus.injection.annotation.Table;
 
 /**
  * Leest de annotaties van een entiteitsklasse via reflectie en slaat de volledige
@@ -25,55 +29,48 @@ public class EntityMetadata<T> {
     private final String tableName;
     @Nullable
     private final FieldMetadata idField;
-    private final List<FieldMetadata> allFields;
-    private final List<FieldMetadata> nonIdFields;
+    private final LinkedHashSet<FieldMetadata> allFields = new LinkedHashSet<>();
+//    private final List<FieldMetadata> nonIdFields;
+    private Class<?> rootEntity;
+    private final DiscriminatorColumn discriminatorColumn;
 
     /**
      * Verwerkt de annotaties van de opgegeven entiteitsklasse en bouwt de mapping op.
      */
     public EntityMetadata(@Nonnull Class<T> entityClass) {
-        this.entityClass = entityClass;
-
         Table tableAnnotation = entityClass.getAnnotation(Table.class);
-        this.tableName = (tableAnnotation != null) ? tableAnnotation.name() : entityClass.getSimpleName().toLowerCase();
+        if (tableAnnotation == null)
+        {
+        	rootEntity = findRootEntity(entityClass);
+        	tableAnnotation = rootEntity.getAnnotation(Table.class);
+        }
+        tableName = tableAnnotation.name();
+        
+        this.entityClass = entityClass;
+        this.idField  = findIdField(isRoot() ? entityClass : rootEntity);
+        this.discriminatorColumn = entityClass.getAnnotation(DiscriminatorColumn.class);
 
-        List<FieldMetadata> all = new ArrayList<>();
-        List<FieldMetadata> nonId = new ArrayList<>();
-        FieldMetadata tempId = null;
         Set<String> gezieneKolommen = new HashSet<>();
 
-        Class<?> huidig = entityClass;
-        while (huidig != null && huidig != Object.class) {
-            for (Field field : huidig.getDeclaredFields()) {
-                boolean hasId = field.isAnnotationPresent(Id.class);
-                boolean hasColumn = field.isAnnotationPresent(Column.class);
-
-                if (!hasId && !hasColumn) continue;
-
-                String colName = field.getName();
-                if (hasColumn) {
-                    Column col = field.getAnnotation(Column.class);
-                    if (!col.name().isEmpty()) {
-                        colName = col.name();
-                    }
-                }
-
-                if (!gezieneKolommen.add(colName)) continue;
-
-                FieldMetadata meta = new FieldMetadata(field, colName, hasId);
-                all.add(meta);
-                if (hasId) {
-                    tempId = meta;
-                } else {
-                    nonId.add(meta);
-                }
-            }
-            huidig = huidig.getSuperclass();
+        for (Field field : entityClass.getDeclaredFields()) {
+        	if (field.isAnnotationPresent(Column.class)) {
+        		Column column = field.getAnnotation(Column.class);
+        		String colName = column.name().isBlank() ? field.getName() : column.name();
+        		if (!gezieneKolommen.add(colName))
+        			continue;
+        		
+        		boolean hasDefaultValue = column.defaultValue() >= 1;
+        		Object defaultValue = hasDefaultValue ? column.defaultValue() : null;
+        		allFields.add(new FieldMetadata(field, colName, defaultValue));
+        	}
+        	else if (field.isAnnotationPresent(OneToMany.class) || field.isAnnotationPresent(ManyToOne.class)) {
+        		
+        	}
         }
-
-        this.idField = tempId;
-        this.allFields = Collections.unmodifiableList(all);
-        this.nonIdFields = Collections.unmodifiableList(nonId);
+    }
+    
+    public Class<T> getEntityClass() {
+    	return entityClass;
     }
 
     @Nonnull
@@ -87,13 +84,33 @@ public class EntityMetadata<T> {
     }
 
     @Nonnull
-    public List<FieldMetadata> getAllFields() {
+    public LinkedHashSet<FieldMetadata> getAllFields() {
         return allFields;
     }
 
-    @Nonnull
-    public List<FieldMetadata> getNonIdFields() {
-        return nonIdFields;
+//    @Nonnull
+//    public List<FieldMetadata> getNonIdFields() {
+//        return nonIdFields;
+//    }
+    
+    public String getDiscriminatorValue() {
+    	return entityClass.getAnnotation(DiscriminatorValue.class).value();
+    }
+    
+    public boolean isRoot() {
+    	return rootEntity == null;
+    }
+    
+    public Class<?> getRootEntity() {
+    	return rootEntity;
+    }
+    
+    public DiscriminatorColumn getDiscriminatorColumn() {
+    	return discriminatorColumn;
+    }
+    
+    public <C extends T> void registerChild(EntityMetadata<?> childMetadata) {
+    	allFields.addAll(childMetadata.getAllFields());
     }
 
     /**
@@ -131,5 +148,22 @@ public class EntityMetadata<T> {
             if (targetType == float.class || targetType == Float.class) return number.floatValue();
         }
         return value;
+    }
+    
+    private Class<?> findRootEntity(Class<?> childClass) {
+    	Class<?> parent = childClass.getSuperclass();
+    	while (!parent.isAnnotationPresent(Table.class))
+    	{
+    		parent = parent.getSuperclass();
+    	}
+    	return parent;
+    }
+    
+    private FieldMetadata findIdField(Class<?> entityClass) {
+    	Field idField = Stream.of(entityClass.getDeclaredFields())
+				.filter(field -> field.isAnnotationPresent(Id.class))
+				.findFirst()
+				.orElseThrow();
+    	return new FieldMetadata(idField, idField.getName(), true);
     }
 }

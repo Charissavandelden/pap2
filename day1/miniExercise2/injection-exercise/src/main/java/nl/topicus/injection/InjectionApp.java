@@ -3,14 +3,19 @@ package nl.topicus.injection;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
 
+import nl.topicus.injection.entities.Attack;
+import nl.topicus.injection.entities.FirePokemon;
 import nl.topicus.injection.entities.GymLeader;
+import nl.topicus.injection.entities.Person;
 import nl.topicus.injection.entities.Pokemon;
 import nl.topicus.injection.entities.Trainer;
+import nl.topicus.injection.mapping.EntityMetadata;
+import nl.topicus.injection.mapping.FieldMetadata;
+import nl.topicus.injection.mapping.MetadataHelper;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.lang.reflect.Field;
 import java.net.InetSocketAddress;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
@@ -18,21 +23,28 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import javax.sql.DataSource;
 
-import org.h2.command.ddl.CreateTable;
-
 public class InjectionApp
 {
+	private static final HashSet<EntityMetadata<?>> rootEntities = new HashSet<>();
+	public static final DataSource datasource = TransactionManager.getDataSource();
 	
     public static void main(String[] args) throws IOException
     {
-    	DataSource datasource = TransactionManager.getDataSource();
         PokemonRepository dao = new PokemonRepository(datasource);
+        
+        registerEntity(Attack.class);
+        registerEntity(Pokemon.class);
+        registerEntity(Person.class);
+        registerEntity(Trainer.class);
+        registerEntity(GymLeader.class);
 
         try (Connection conn = datasource.getConnection())
         {
@@ -178,31 +190,32 @@ public class InjectionApp
      */
     private static void setupDatabase(Connection conn) throws SQLException
     {
-    	createTable(Pokemon.class, conn);
-
+    	System.out.println("====== DROPPING & CREATING TABLES ======");
+    	rootEntities.forEach(rootEntity -> dropAndCreateTable(rootEntity, conn));
+    	
+    	System.out.println("\n====== INSERTING ENTITIES ======");
+    	PokemonRepository pokemonDAO = new PokemonRepository(datasource);
         try (Statement stmt = conn.createStatement())
         {
-            System.out.println("Create pokemon table");
-            stmt.execute("DROP TABLE IF EXISTS attack");
-            stmt.execute("DROP TABLE IF EXISTS \"fire-pokemon\"");
-            stmt.execute("DROP TABLE IF EXISTS pokemon");
-            stmt.execute("""
-                    CREATE TABLE pokemon (
-                        id BIGINT AUTO_INCREMENT PRIMARY KEY,
-                        name VARCHAR(100),
-                        type VARCHAR(100),
-                        version INT DEFAULT 1
-                    )
-                """);
-            
-            System.out.println("Inserting 3 pokemon");
-            stmt.executeUpdate("INSERT INTO pokemon (name, type) VALUES ('Bulbasaur', 'Grass')");
-            stmt.executeUpdate("INSERT INTO pokemon (name, type) VALUES ('Squirtle', 'Water')");
-            stmt.executeUpdate("INSERT INTO pokemon (name, type) VALUES ('Pikachu', 'Electric')");
+        	ArrayList<Pokemon> starterPokemon = new ArrayList<Pokemon>();
+        	starterPokemon.add(new Pokemon("Bulbasaur", "Grass"));
+        	starterPokemon.add(new Pokemon("Squirtle", "Water"));
+        	starterPokemon.add(new Pokemon("Pikachu", "Electric"));
+        	
+        	System.out.println("Inserting " + starterPokemon.size() + " pokemon");
+        	for (Pokemon pokemon : starterPokemon) {
+				pokemonDAO.save(pokemon);
+			}
+//        	pokemonDAO.saveAll(starterPokemon);
+        	
+//            stmt.executeUpdate("INSERT INTO pokemon (name, type) VALUES ('Bulbasaur', 'Grass')");
+//            stmt.executeUpdate("INSERT INTO pokemon (name, type) VALUES ('Squirtle', 'Water')");
+//            stmt.executeUpdate("INSERT INTO pokemon (name, type) VALUES ('Pikachu', 'Electric')");
 
             System.out.println("Database gevuld met 3 pokemon.");
 
             System.out.println("Create fire-pokemon table");
+            stmt.execute("DROP TABLE IF EXISTS \"fire-pokemon\"");
             stmt.execute("""
                     CREATE TABLE "fire-pokemon" (
                         id BIGINT AUTO_INCREMENT PRIMARY KEY,
@@ -240,17 +253,19 @@ public class InjectionApp
 
             System.out.println("Database gevuld met 6 attacks.");
 
-            System.out.println("Create persons table");
-            stmt.execute("DROP TABLE IF EXISTS persons");
-            stmt.execute("""
-                    CREATE TABLE persons (
-                        id BIGINT AUTO_INCREMENT PRIMARY KEY,
-                        name VARCHAR(100),
-                        age INT,
-                        starter VARCHAR(100),
-                        totalBattles INT
-                    )
-                """);
+//            System.out.println("Create persons table");
+//            stmt.execute("DROP TABLE IF EXISTS persons");
+//            stmt.execute("""
+//                    CREATE TABLE persons (
+//                        id BIGINT AUTO_INCREMENT PRIMARY KEY,
+//                        name VARCHAR(100),
+//                        age INT,
+//                        starter VARCHAR(100),
+//                        totalBattles INT
+//                    )
+//                """);
+            
+            printTable(Pokemon.class);
         }
         catch (SQLException e)
         {
@@ -285,32 +300,65 @@ public class InjectionApp
         return sb.toString();
     }
     
-    private static void createTable(Class<?> entityClass, Connection conn)
+    private static void registerEntity(Class<?> entityClass) {
+    	EntityMetadata<?> entityMetadata = new EntityMetadata<>(entityClass);
+    	if (entityMetadata.isRoot())
+    		rootEntities.add(entityMetadata);
+    	else {
+    		
+    		rootEntities.stream()
+    		.filter(rootEntity -> rootEntity.getEntityClass().isAssignableFrom(entityMetadata.getRootEntity()))
+    		.findFirst()
+    		.get()
+    		.registerChild(entityMetadata);
+    	}
+    }
+    
+    private static void dropAndCreateTable(EntityMetadata<?> rootEntity, Connection conn)
     {
-    	String dropIfExist = "DROP TABLE IF EXISTS ?";
-    	String createTable = "CREATE TABLE ? (";
-    	System.out.println("Table for class " + entityClass.getSimpleName());
-    	
-    	Stream.of(entityClass.getFields());
-    	
-    	try (PreparedStatement stmt = conn.prepareStatement(dropIfExist))
-        {
-    		stmt.setString(0, entityClass.getSimpleName());
-            stmt.execute("DROP TABLE IF EXISTS pokemon");
-            stmt.execute("""
-                    CREATE TABLE pokemon (
-                        id BIGINT AUTO_INCREMENT PRIMARY KEY,
-                        name VARCHAR(100),
-                        type VARCHAR(100)
-                    )
-                """);
+    	try (PreparedStatement stmt = conn.prepareStatement("DROP TABLE IF EXISTS " + rootEntity.getTableName())) {
+    		stmt.execute();
+    		System.out.println("\nDropped table " + rootEntity.getTableName() + " with SQL: " + stmt);
         } catch (SQLException e) {
-			System.out.println("Couldn't generate table for entity: " + entityClass.getSimpleName());
+			System.out.println("Couldn't drop table: " + rootEntity.getTableName());
+			e.printStackTrace();
+		}
+
+    	StringBuilder tableBuilder = new StringBuilder("CREATE TABLE " + rootEntity.getTableName() + " (id BIGINT AUTO_INCREMENT PRIMARY KEY, ");
+    	
+    	if (rootEntity.getDiscriminatorColumn() != null) {
+    		tableBuilder.append(rootEntity.getDiscriminatorColumn().name() + " VARCHAR(255), ");
+    	}
+    	
+    	Iterator<FieldMetadata> fieldIterator = rootEntity.getAllFields().iterator();
+    	while (fieldIterator.hasNext()) {
+    		FieldMetadata field = fieldIterator.next();
+   			tableBuilder.append(toDBQueryColumnParameter(field));
+    		tableBuilder.append(fieldIterator.hasNext() ? ", " : ")");
+    	}
+    	
+    	try (PreparedStatement stmt = conn.prepareStatement(tableBuilder.toString())) {
+            stmt.execute();
+            System.out.println("Creating table " + rootEntity.getTableName() + " with SQL: " + stmt);
+        } catch (SQLException e) {
+			System.out.println("Couldn't generate table for entity: " + rootEntity.getTableName());
 			e.printStackTrace();
 		}
     }
     
-    private void printTable(Class<?> entityClass)
+    private static String toDBQueryColumnParameter(FieldMetadata fieldMetadata)
+    {
+    	StringBuilder dbColumnBuilder = new StringBuilder(fieldMetadata.getColumnName());
+    	String type = MetadataHelper.columnTypeFor(fieldMetadata.getField().getType());
+    	dbColumnBuilder.append(type);
+    	
+    	if (fieldMetadata.hasDefaultValue())
+    		dbColumnBuilder.append(" DEFAULT " + fieldMetadata.getDefaultValue());
+    	
+    	return dbColumnBuilder.toString();
+    }
+    
+    private static void printTable(Class<?> entityClass)
     {
     	System.out.println("Retrieving all data for entity: " + entityClass.getSimpleName());
     }

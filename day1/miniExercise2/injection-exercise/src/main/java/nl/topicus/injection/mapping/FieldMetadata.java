@@ -1,8 +1,9 @@
 package nl.topicus.injection.mapping;
 
+import java.lang.reflect.Field;
+
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
-import java.lang.reflect.Field;
 
 /**
  * Houdt de mapping-informatie bij voor één veld van een entiteitsklasse:
@@ -13,12 +14,24 @@ public class FieldMetadata {
     private final Field field;
     private final String columnName;
     private final boolean isId;
+    private final Object defaultValue;
 
+
+    public FieldMetadata(@Nonnull Field field, @Nonnull String columnName, Object defaultValue)
+    {
+    	this(field, columnName, false, defaultValue);
+    }
+    
     public FieldMetadata(@Nonnull Field field, @Nonnull String columnName, boolean isId) {
-        this.field = field;
-        this.columnName = columnName;
-        this.isId = isId;
-        field.setAccessible(true);
+    	this(field, columnName, isId, null);
+    }
+    
+    public FieldMetadata(@Nonnull Field field, @Nonnull String columnName, boolean isId, Object defaultValue) {
+    	this.field = field;
+    	this.columnName = columnName;
+    	this.isId = isId;
+    	this.defaultValue = defaultValue;
+    	field.setAccessible(true);
     }
 
     @Nonnull
@@ -33,6 +46,16 @@ public class FieldMetadata {
 
     public boolean isId() {
         return isId;
+    }
+    
+    public boolean hasDefaultValue()
+    {
+    	return defaultValue != null;
+    }
+    
+    public Object getDefaultValue()
+    {
+    	return defaultValue;
     }
 
     /**

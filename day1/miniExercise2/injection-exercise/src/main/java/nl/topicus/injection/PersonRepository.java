@@ -50,4 +50,25 @@ public class PersonRepository extends AbstractDataSourceRepository<Person> {
 
         return results;
     }
+    
+    @Override
+    @Nonnull
+    public List<Person> findAll() throws SQLException {
+        List<Person> results = new ArrayList<>();
+        transactionManager.runInTransaction(() -> {
+            try {
+                String sql = "SELECT * FROM " + metadata.getTableName();
+                try (Connection conn = getConnection();
+                        PreparedStatement stmt = conn.prepareStatement(sql);
+                        ResultSet rs = stmt.executeQuery()) {
+                    while (rs.next()) {
+                        results.add(metadata.mapRow(rs));
+                    }
+                }
+            } catch (SQLException e) {
+                throw new RuntimeException(e); // must wrap checked exception
+            }
+        });
+        return results;
+    }
 }

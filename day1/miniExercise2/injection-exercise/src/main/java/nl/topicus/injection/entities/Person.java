@@ -5,7 +5,7 @@ import nl.topicus.injection.annotation.Inheritance.InheritanceType;
 
 @Entity
 @Inheritance(type = InheritanceType.SINGLE_TABLE)
-@DiscriminatorColumn
+@DiscriminatorColumn(name="person_type")
 @Table(name = "persons")
 public abstract class Person {
 	@Id
@@ -16,7 +16,7 @@ public abstract class Person {
 	
 	@Column(name = "age")
 	private int age;
-
+	
 	public long getId() {
 		return id;
 	}

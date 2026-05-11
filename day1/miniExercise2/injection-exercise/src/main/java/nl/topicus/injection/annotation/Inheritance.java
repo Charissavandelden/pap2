@@ -11,7 +11,9 @@ public @interface Inheritance {
 	InheritanceType type();
 	
 	public enum InheritanceType {
-		SINGLE_TABLE
+		SINGLE_TABLE,
+		TABLE_PER_CLASS,
+		JOINED
 	}
 	
 }
