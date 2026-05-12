@@ -5,10 +5,14 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import nl.topicus.orm.entities.Attack;
+import nl.topicus.orm.entities.Pokemon;
+
 import javax.sql.DataSource;
 import java.sql.*;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class TransactionManagerTest {
 
@@ -26,17 +30,20 @@ class TransactionManagerTest {
         try (Connection conn = dataSource.getConnection();
              Statement stmt = conn.createStatement()) {
             stmt.execute("CREATE TABLE IF NOT EXISTS pokemon "
-                    + "(id BIGINT AUTO_INCREMENT PRIMARY KEY, name VARCHAR(100), type VARCHAR(100))");
+                    + "(id BIGINT AUTO_INCREMENT PRIMARY KEY, name VARCHAR(100), type VARCHAR(100), version INT DEFAULT 1)");
+            stmt.execute("CREATE TABLE IF NOT EXISTS attack "
+                    + "(id BIGINT AUTO_INCREMENT PRIMARY KEY, name VARCHAR(100), damage INT, version INT DEFAULT 1, pokemon_id BIGINT)");
         }
     }
 
     @BeforeEach
     void setup() throws SQLException {
-        transactionManager = new TransactionManager(dataSource);
+        transactionManager = TransactionManager.getInstance(dataSource);
 
         try (Connection conn = dataSource.getConnection();
              Statement stmt = conn.createStatement()) {
             stmt.execute("DELETE FROM pokemon");
+            stmt.execute("DELETE FROM attack");
         }
     }
 
@@ -85,8 +92,6 @@ class TransactionManagerTest {
         }
 
         transactionManager.rollback(conn);
-        conn.setAutoCommit(true);
-        conn.close();
 
         try (Connection verifyConn = dataSource.getConnection();
              Statement stmt = verifyConn.createStatement();
@@ -107,7 +112,7 @@ class TransactionManagerTest {
             stmt.setString(2, "Fire");
             stmt.executeUpdate();
         }
-        
+
         String updateStmt = "UPDATE FROM pokemon WHERE id = ? SET type = ?";
 
         conn.close();
@@ -118,6 +123,50 @@ class TransactionManagerTest {
             rs.next();
             assertEquals(0, rs.getInt(1));
         }
+    }
+
+    @Test
+    void tweeRepoSavesInEenTransactieCommitten() throws SQLException {
+        PokemonRepository pokemonRepo = new PokemonRepository(dataSource);
+        AttackRepository attackRepo = new AttackRepository(dataSource);
+
+        transactionManager.runInTransaction(() -> {
+            try {
+                Pokemon p = new Pokemon();
+                p.setName("Pikachu");
+                p.setType("Electric");
+                pokemonRepo.save(p);
+
+                Attack a = new Attack("Thunderbolt", 90);
+                attackRepo.save(a);
+            } catch (SQLException e) {
+                throw new RuntimeException(e);
+            }
+        });
+
+        assertEquals(1, pokemonRepo.findAll().size(), "Pokémon moet zijn opgeslagen na commit");
+        assertEquals(1, attackRepo.findAll().size(), "Attack moet zijn opgeslagen na commit");
+    }
+
+    @Test
+    void foutHalverwegeRollbackt() throws SQLException {
+        PokemonRepository pokemonRepo = new PokemonRepository(dataSource);
+
+        assertThrows(RuntimeException.class, () ->
+                transactionManager.runInTransaction(() -> {
+                    try {
+                        Pokemon p1 = new Pokemon();
+                        p1.setName("Pikachu");
+                        p1.setType("Electric");
+                        pokemonRepo.save(p1);
+                    } catch (SQLException e) {
+                        throw new RuntimeException(e);
+                    }
+                    throw new RuntimeException("simulated mid-transaction failure");
+                }));
+
+        assertEquals(0, pokemonRepo.findAll().size(),
+                "Bij een fout halverwege mag geen Pokémon zijn opgeslagen");
     }
 }
 

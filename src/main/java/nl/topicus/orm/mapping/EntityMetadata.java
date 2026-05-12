@@ -127,6 +127,11 @@ public class EntityMetadata<T> {
     public T mapRow(@Nonnull ResultSet rs) throws SQLException {
         try {
             T instance = entityClass.getDeclaredConstructor().newInstance();
+            if (idField != null) {
+                Object idValue = rs.getObject(idField.getColumnName());
+                idValue = convertType(idValue, idField.getField().getType());
+                idField.setValue(instance, idValue);
+            }
             for (FieldMetadata fieldMeta : allFields) {
                 Object value = rs.getObject(fieldMeta.getColumnName());
                 value = convertType(value, fieldMeta.getField().getType());

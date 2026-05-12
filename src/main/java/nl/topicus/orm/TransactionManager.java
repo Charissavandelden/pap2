@@ -8,63 +8,87 @@ import java.sql.SQLException;
 
 public class TransactionManager {
 
-	//TODO: Deze class moet een SINGLETON worden, zodat we deze overal kunnen gebruiken.
+	private static final java.util.Map<DataSource, TransactionManager> instances = new java.util.concurrent.ConcurrentHashMap<>();
 
 	@Nullable
 	private final DataSource injectedDataSource;
 
 	ThreadLocal<Connection> connection = new ThreadLocal<>();
 
-	public TransactionManager()
-	{
-		this.injectedDataSource = null;
-	}
-
-	public TransactionManager(@Nonnull DataSource dataSource)
+	private TransactionManager(@Nonnull DataSource dataSource)
 	{
 		this.injectedDataSource = dataSource;
 	}
 
-	public Connection begin() throws SQLException {
-		DataSource ds = (injectedDataSource != null) ? injectedDataSource : ConnectionManager.getDataSource();
-		connection.set(ds.getConnection());
-		return connection.get();
+	public static TransactionManager getInstance(@Nonnull DataSource dataSource)
+	{
+		return instances.computeIfAbsent(dataSource, TransactionManager::new);
 	}
-	
+
+	public Connection begin() throws SQLException {
+		Connection existing = connection.get();
+		if (existing != null && !existing.isClosed()) {
+			return existing;
+		}
+		DataSource ds = (injectedDataSource != null) ? injectedDataSource : ConnectionManager.getDataSource();
+		Connection fresh = ds.getConnection();
+		try {
+			fresh.setAutoCommit(false);
+		} catch (SQLException e) {
+			try { fresh.close(); } catch (SQLException ignore) {}
+			throw e;
+		}
+		connection.set(fresh);
+		return fresh;
+	}
+
 	public void commit(Connection conn) throws SQLException
 	{
-		//TODO: Logica implementeren voor commit, terugzetten van autocommit en het closen van de connection
-
-		conn.commit();
+		try {
+			conn.commit();
+		} finally {
+			try { conn.close(); } catch (SQLException ignore) {}
+			connection.remove();
+		}
 		System.out.println("Transaction: succeeded");
 	}
 
 	public void rollback(Connection conn) throws SQLException
 	{
-		//TODO: Logica implementeren voor rollback, terugzetten van autocommit en het closen van de connection
-
-		conn.rollback();
+		try {
+			conn.rollback();
+		} finally {
+			try { conn.close(); } catch (SQLException ignore) {}
+			connection.remove();
+		}
 		System.out.println("Transaction: failed ):");
 	}
 
-	public void runInTransaction(Runnable runnable) throws SQLException
+	public void runInTransaction(Runnable runnable)
 	{
-		begin();
+		Connection beforeBegin = connection.get();
+		Connection conn;
+		try {
+			conn = begin();
+		} catch (SQLException e) {
+			throw new RuntimeException("Kan transactie niet starten", e);
+		}
+		boolean nieuweTransactie = (conn != beforeBegin);
 
-		connection.get().setAutoCommit(false);
-		Connection conn = connection.get();
-		//TODO: Met deze methode is bedoeld als wrapper om een stuk sql bewerking, dat in zijn geheel moet slagen of falen
 		try {
 			runnable.run();
-
-			commit(conn);
-		} catch (SQLException e) {
-			rollback(connection.get());
-
-			throw new SQLException("Transaction failed", e);
-//			e.printStackTrace();
-		} finally {
-			conn.setAutoCommit(true);
+			if (nieuweTransactie) {
+				try {
+					commit(conn);
+				} catch (SQLException e) {
+					throw new RuntimeException("Commit faalde", e);
+				}
+			}
+		} catch (RuntimeException e) {
+			if (nieuweTransactie) {
+				try { rollback(conn); } catch (SQLException ignore) {}
+			}
+			throw e;
 		}
 	}
 }

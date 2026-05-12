@@ -27,7 +27,7 @@ public class PersonRepository extends AbstractDataSourceRepository<Person> {
     }
 
     private List<Person> zoekMetLike(@Nonnull String kolom, @Nonnull String waarde) throws SQLException {
-        TransactionManager transactionManager = new TransactionManager();
+        TransactionManager transactionManager = this.transactionManager;
                 List<Person> results = new ArrayList<>();
 
 

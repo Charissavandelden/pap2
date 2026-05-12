@@ -27,16 +27,17 @@ class ConcurrencyTest
 	static void setupDatabase() throws SQLException
 	{
 		JdbcDataSource ds = new JdbcDataSource();
-		ds.setUrl("jdbc:h2:file:./data/miauw;DB_CLOSE_DELAY=-1");
-		ds.setUser("miauw");
+		ds.setUrl("jdbc:h2:mem:concurrencydb;DB_CLOSE_DELAY=-1");
+		ds.setUser("test");
 		ds.setPassword("");
 		dataSource = ds;
 
 		try (Connection conn = dataSource.getConnection(); Statement stmt = conn.createStatement())
 		{
-			stmt.execute("CREATE TABLE IF NOT EXISTS pokemon "
+			stmt.execute("DROP TABLE IF EXISTS pokemon");
+			stmt.execute("CREATE TABLE pokemon "
 					+ "(id BIGINT AUTO_INCREMENT PRIMARY KEY, "
-					+ "name VARCHAR(100), type VARCHAR(100))");
+					+ "name VARCHAR(100), type VARCHAR(100), version INT DEFAULT 1)");
 		}
 	}
 
@@ -110,7 +111,7 @@ class ConcurrencyTest
 	void testElkeThreadKrijgtEigenConnection() throws Exception
 	{
 		//open transationmanager
-		TransactionManager transactionManager = new TransactionManager(dataSource);
+		TransactionManager transactionManager = TransactionManager.getInstance(dataSource);
 
 		// CopyOnWriteArrayList: Dit is een lijst die veilig is om te gebruiken wanneer meerdere
 		// threads er tegelijkertijd naar schrijven.
@@ -202,5 +203,28 @@ class ConcurrencyTest
 				eindResultaat.getType().equals("Fire") || eindResultaat.getType().equals("Water"),
 				"Lost update: één van de twee updates is verloren gegaan"
 		);
+	}
+
+	// ---------------------------------------------------------------
+	// TEST 4: Optimistic locking - stale version moet OptimisticLockException gooien
+	// ---------------------------------------------------------------
+	@Test
+	void testOptimisticLockGooitException() throws Exception {
+		Pokemon origineel = new Pokemon();
+		origineel.setName("Eevee");
+		origineel.setType("Normal");
+		pokemonRepository.save(origineel);
+		long id = origineel.getId();
+
+		Pokemon kopieA = pokemonRepository.findById(id).orElseThrow();
+		Pokemon kopieB = pokemonRepository.findById(id).orElseThrow();
+
+		kopieA.setType("Fire");
+		pokemonRepository.update(kopieA);
+
+		kopieB.setType("Water");
+		assertThrows(OptimisticLockException.class,
+				() -> pokemonRepository.update(kopieB),
+				"Tweede update met stale version moet OptimisticLockException gooien");
 	}
 }

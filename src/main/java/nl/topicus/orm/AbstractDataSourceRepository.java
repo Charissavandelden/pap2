@@ -17,15 +17,20 @@ public abstract class AbstractDataSourceRepository<T> extends GenericRepository<
     private final DataSource datasource;
 
     protected AbstractDataSourceRepository(@Nonnull Class<T> entityClass, @Nonnull DataSource datasource) {
-        super(entityClass, new TransactionManager(datasource));
+        super(entityClass, TransactionManager.getInstance(datasource));
         this.datasource = datasource;
     }
 
     /**
-     * Haalt een nieuwe verbinding op uit de geconfigureerde {@link DataSource}.
+     * Geeft de actieve transactieconnectie terug als die aanwezig is,
+     * anders een nieuwe losse connectie uit de DataSource (auto-commit gedrag).
      */
     @Override
     public Connection getConnection() throws SQLException {
+        Connection actief = transactionManager.connection.get();
+        if (actief != null && !actief.isClosed()) {
+            return actief;
+        }
         return datasource.getConnection();
     }
 }
