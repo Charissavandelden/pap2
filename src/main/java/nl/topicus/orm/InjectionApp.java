@@ -34,7 +34,7 @@ import javax.sql.DataSource;
 public class InjectionApp
 {
 	private static final HashSet<EntityMetadata<?>> rootEntities = new HashSet<>();
-	public static final DataSource datasource = TransactionManager.getDataSource();
+	public static final DataSource datasource = ConnectionManager.getDataSource();
 	
     public static void main(String[] args) throws IOException
     {

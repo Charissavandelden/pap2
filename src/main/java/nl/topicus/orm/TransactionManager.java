@@ -6,7 +6,7 @@ import javax.sql.DataSource;
 import java.sql.Connection;
 import java.sql.SQLException;
 
-public class TransactionManager extends ConnectionManager {
+public class TransactionManager {
 
 	private static final java.util.Map<DataSource, TransactionManager> instances = new java.util.concurrent.ConcurrentHashMap<>();
 
@@ -17,7 +17,6 @@ public class TransactionManager extends ConnectionManager {
 
 	private TransactionManager(@Nonnull DataSource dataSource)
 	{
-		super();
 		this.injectedDataSource = dataSource;
 	}
 
@@ -27,7 +26,7 @@ public class TransactionManager extends ConnectionManager {
 	}
 
 	public Connection begin() throws SQLException {
-		DataSource ds = (injectedDataSource != null) ? injectedDataSource : getDataSource();
+		DataSource ds = (injectedDataSource != null) ? injectedDataSource : ConnectionManager.getDataSource();
 		connection.set(ds.getConnection());
 		return connection.get();
 	}
