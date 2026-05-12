@@ -26,38 +26,69 @@ public class TransactionManager {
 	}
 
 	public Connection begin() throws SQLException {
+		Connection existing = connection.get();
+		if (existing != null && !existing.isClosed()) {
+			return existing;
+		}
 		DataSource ds = (injectedDataSource != null) ? injectedDataSource : ConnectionManager.getDataSource();
-		connection.set(ds.getConnection());
-		return connection.get();
+		Connection fresh = ds.getConnection();
+		try {
+			fresh.setAutoCommit(false);
+		} catch (SQLException e) {
+			try { fresh.close(); } catch (SQLException ignore) {}
+			throw e;
+		}
+		connection.set(fresh);
+		return fresh;
 	}
-	
+
 	public void commit(Connection conn) throws SQLException
 	{
-		conn.commit();
-		conn.close();
-		connection.remove();
+		try {
+			conn.commit();
+		} finally {
+			try { conn.close(); } catch (SQLException ignore) {}
+			connection.remove();
+		}
 		System.out.println("Transaction: succeeded");
 	}
 
 	public void rollback(Connection conn) throws SQLException
 	{
-		conn.rollback();
-		conn.close();
-		connection.remove();
+		try {
+			conn.rollback();
+		} finally {
+			try { conn.close(); } catch (SQLException ignore) {}
+			connection.remove();
+		}
 		System.out.println("Transaction: failed ):");
 	}
 
-	public void runInTransaction(Runnable runnable) throws SQLException
+	public void runInTransaction(Runnable runnable)
 	{
-		begin();
-		Connection conn = connection.get();
-		conn.setAutoCommit(false);
+		Connection beforeBegin = connection.get();
+		Connection conn;
+		try {
+			conn = begin();
+		} catch (SQLException e) {
+			throw new RuntimeException("Kan transactie niet starten", e);
+		}
+		boolean nieuweTransactie = (conn != beforeBegin);
+
 		try {
 			runnable.run();
-			commit(conn);
-		} catch (Exception e) {
-			rollback(conn);
-			throw new RuntimeException("Transaction failed", e);
+			if (nieuweTransactie) {
+				try {
+					commit(conn);
+				} catch (SQLException e) {
+					throw new RuntimeException("Commit faalde", e);
+				}
+			}
+		} catch (RuntimeException e) {
+			if (nieuweTransactie) {
+				try { rollback(conn); } catch (SQLException ignore) {}
+			}
+			throw e;
 		}
 	}
 }
