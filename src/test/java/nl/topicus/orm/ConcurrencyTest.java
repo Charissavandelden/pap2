@@ -204,4 +204,27 @@ class ConcurrencyTest
 				"Lost update: één van de twee updates is verloren gegaan"
 		);
 	}
+
+	// ---------------------------------------------------------------
+	// TEST 4: Optimistic locking - stale version moet OptimisticLockException gooien
+	// ---------------------------------------------------------------
+	@Test
+	void testOptimisticLockGooitException() throws Exception {
+		Pokemon origineel = new Pokemon();
+		origineel.setName("Eevee");
+		origineel.setType("Normal");
+		pokemonRepository.save(origineel);
+		long id = origineel.getId();
+
+		Pokemon kopieA = pokemonRepository.findById(id).orElseThrow();
+		Pokemon kopieB = pokemonRepository.findById(id).orElseThrow();
+
+		kopieA.setType("Fire");
+		pokemonRepository.update(kopieA);
+
+		kopieB.setType("Water");
+		assertThrows(OptimisticLockException.class,
+				() -> pokemonRepository.update(kopieB),
+				"Tweede update met stale version moet OptimisticLockException gooien");
+	}
 }
