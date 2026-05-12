@@ -173,7 +173,17 @@ public abstract class GenericRepository<T> {
                     if (versieVeld.isPresent()) {
                         stmt.setObject(index + 1, versieVeld.get().getValue(entity));
                     }
-                    stmt.executeUpdate();
+                    int rows = stmt.executeUpdate();
+                    if (versieVeld.isPresent() && rows == 0) {
+                        throw new OptimisticLockException(
+                                entity.getClass().getSimpleName()
+                                        + " id=" + idField.getValue(entity)
+                                        + " is door een andere transactie gewijzigd");
+                    }
+                    if (versieVeld.isPresent()) {
+                        int huidig = (int) versieVeld.get().getValue(entity);
+                        versieVeld.get().setValue(entity, huidig + 1);
+                    }
                 } finally {
                     sluitAlsNietTransactioneel(conn);
                 }
