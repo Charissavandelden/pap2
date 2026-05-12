@@ -147,5 +147,26 @@ class TransactionManagerTest {
         assertEquals(1, pokemonRepo.findAll().size(), "Pokémon moet zijn opgeslagen na commit");
         assertEquals(1, attackRepo.findAll().size(), "Attack moet zijn opgeslagen na commit");
     }
+
+    @Test
+    void foutHalverwegeRollbackt() throws SQLException {
+        PokemonRepository pokemonRepo = new PokemonRepository(dataSource);
+
+        assertThrows(RuntimeException.class, () ->
+                transactionManager.runInTransaction(() -> {
+                    try {
+                        Pokemon p1 = new Pokemon();
+                        p1.setName("Pikachu");
+                        p1.setType("Electric");
+                        pokemonRepo.save(p1);
+                    } catch (SQLException e) {
+                        throw new RuntimeException(e);
+                    }
+                    throw new RuntimeException("simulated mid-transaction failure");
+                }));
+
+        assertEquals(0, pokemonRepo.findAll().size(),
+                "Bij een fout halverwege mag geen Pokémon zijn opgeslagen");
+    }
 }
 
